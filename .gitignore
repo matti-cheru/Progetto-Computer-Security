@@ -1,0 +1,15 @@
+# Ignora ambiente virtuale
+.venv/
+venv/
+env/
+
+# Ignora file compilati Python
+__pycache__/
+*.pyc
+
+# Ignora variabili d'ambiente (password/token)
+.env
+
+# Ignora cartelle IDE
+.vscode/
+.idea/
