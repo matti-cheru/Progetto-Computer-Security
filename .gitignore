@@ -12,4 +12,6 @@ __pycache__/
 
 # Ignora cartelle IDE
 .vscode/
-.idea/
+.idea/data/~$*.xlsx
+
+~$*.xlsx

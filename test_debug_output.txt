@@ -1,0 +1,15 @@
+﻿python : Traceback (most recent call last):
+In riga:1 car:12
++ echo "s" | python test_debug_nonetype.py 2>&1 | Out-File -Encoding ut ...
++            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\apote\Desktop\cerutti\Progetto-Computer-Security\test_debug_nonetype.py", line 104, in <module>
+    print("""
+  File "C:\Program 
+Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\Lib\encodings\cp1252.py", line 
+19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 2-79: character maps to <undefined>

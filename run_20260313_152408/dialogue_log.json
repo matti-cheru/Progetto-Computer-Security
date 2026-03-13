@@ -1,0 +1,82 @@
+{
+  "timestamp": "2026-03-13T15:32:05.492975",
+  "company_profile": {
+    "industry": "healthcare",
+    "size": "small",
+    "employees": 30,
+    "data_types": [],
+    "data_sensitivity": null,
+    "infrastructure": [],
+    "compliance_requirements": [
+      "HIPAA"
+    ],
+    "current_maturity": "basic",
+    "critical_assets": []
+  },
+  "conversation": [
+    {
+      "turn": 1,
+      "phase": "welcome",
+      "question": "\ud83d\udcca First, tell me about your organization.\n\nWhat INDUSTRY does your organization operate in?\n(e.g., Healthcare, Finance, Retail, Manufacturing, Technology, Education, Government, etc.)",
+      "response": "We are a small healthcare clinic providing primary care services.",
+      "extracted": {
+        "industry": "healthcare",
+        "industry_category": "healthcare"
+      }
+    },
+    {
+      "turn": 2,
+      "phase": "industry",
+      "question": "\ud83d\udcca First, tell me about your organization.\n\nWhat INDUSTRY does your organization operate in?\n(e.g., Healthcare, Finance, Retail, Manufacturing, Technology, Education, Government, etc.)",
+      "response": "Small practice with approximately 30 employees including doctors and nurses.",
+      "extracted": {
+        "size": "small",
+        "employees": 30
+      }
+    },
+    {
+      "turn": 3,
+      "phase": "size",
+      "question": "\ud83d\udcca First, tell me about your organization.\n\nWhat INDUSTRY does your organization operate in?\n(e.g., Healthcare, Finance, Retail, Manufacturing, Technology, Education, Government, etc.)",
+      "response": "We handle electronic health records (EHR), personal health information (PHI), and medical histories.",
+      "extracted": {
+        "raw_response": "We handle electronic health records (EHR), personal health information (PHI), and medical histories.",
+        "extraction_failed": true
+      }
+    },
+    {
+      "turn": 4,
+      "phase": "data_sensitivity",
+      "question": "\ud83d\udcca First, tell me about your organization.\n\nWhat INDUSTRY does your organization operate in?\n(e.g., Healthcare, Finance, Retail, Manufacturing, Technology, Education, Government, etc.)",
+      "response": "Cloud-based EHR on AWS, some on-premise workstations, remote access for staff.",
+      "extracted": {
+        "raw_response": "Cloud-based EHR on AWS, some on-premise workstations, remote access for staff.",
+        "extraction_failed": true
+      }
+    },
+    {
+      "turn": 5,
+      "phase": "infrastructure",
+      "question": "\ud83d\udcca First, tell me about your organization.\n\nWhat INDUSTRY does your organization operate in?\n(e.g., Healthcare, Finance, Retail, Manufacturing, Technology, Education, Government, etc.)",
+      "response": "Minimal security - just passwords and antivirus. Need to improve for HIPAA.",
+      "extracted": {
+        "current_maturity": "basic"
+      }
+    },
+    {
+      "turn": 6,
+      "phase": "maturity",
+      "question": "\ud83d\udcca First, tell me about your organization.\n\nWhat INDUSTRY does your organization operate in?\n(e.g., Healthcare, Finance, Retail, Manufacturing, Technology, Education, Government, etc.)",
+      "response": "Need HIPAA compliance for PHI. Concerned about data breaches.",
+      "extracted": {
+        "compliance_requirements": [
+          "HIPAA"
+        ],
+        "specific_concerns": [
+          "data breaches"
+        ]
+      }
+    }
+  ],
+  "identified_controls": []
+}

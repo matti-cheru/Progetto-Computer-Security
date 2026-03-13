@@ -6,7 +6,7 @@ from openai import OpenAI
 # SECURITY NOTE: The documentation recommends using environment variables.
 # Ideally, run: export GPUSTACK_API_KEY="your-real-key" in your terminal.
 # If you cannot set env vars, replace the placeholder below.
-DEFAULT_API_KEY_PLACEHOLDER = "default_key_placeholder"
+DEFAULT_API_KEY_PLACEHOLDER = "gpustack_8a00037ab4220858_6479d07686028e2f970357b1a81200e4"
 
 # Connection Settings [cite: 222, 234]
 CLUSTER_BASE_URL = "https://gpustack.ing.unibs.it/v1"
