@@ -1,0 +1,1 @@
+manca da controllare da dialogue_manger.py in poi
