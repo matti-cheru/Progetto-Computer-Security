@@ -78,7 +78,7 @@ def demo_simple_query():
     print("\n\n" + "="*80)
     print("📤 PROMPT SENT TO LLM")
     print("="*80)
-    print(prompt[:600] + "\n... [truncated for display] ...")
+    print(prompt + "\n... [truncated for display] ...")
     print("="*80)
     
     print("\n⏳ Waiting for LLM response... (this may take 5-10 seconds)")
@@ -202,51 +202,6 @@ def demo_simple_query():
     print("║" + " "*26 + "SUMMARY OF DATA FLOWS" + " "*31 + "║")
     print("╚" + "="*78 + "╝")
     
-    print("""
-📋 What you just saw:
-
-1️⃣  PROMPT TO LLM
-   ✓ Complete dataframe structure
-   ✓ ReAct format instructions
-   ✓ User question
-
-2️⃣  LLM ITERATION 1 RESPONSE
-   ✓ Content: Thought → Action → Action Input (Python code)
-   ✓ Reasoning: Internal thought process (51+ tokens)
-   ✓ Code: Pandas query to count Asset Management categories
-
-3️⃣  CODE EXECUTION
-   ✓ Run generated Python on real NIST data
-   ✓ Get concrete result (e.g., "6 subcategories")
-
-4️⃣  OBSERVATION FEEDBACK
-   ✓ Send result back to LLM
-   ✓ LLM can verify and format answer
-
-5️⃣  LLM ITERATION 2 RESPONSE
-   ✓ Content: Final Answer with result
-   ✓ Reasoning: Confirmation logic
-
-6️⃣  TOKEN USAGE
-   ✓ Tracked for every request
-   ✓ Reasoning tokens separated from output tokens
-
-🎯 KEY INSIGHTS:
-
-✅ TRANSPARENCY: Every step is visible and traceable
-✅ ZERO HALLUCINATIONS: Code runs on real data
-✅ REASONING EXPOSED: See LLM's internal thought process
-✅ DETERMINISTIC: Temperature 0.0 = reproducible results
-✅ AUDITABLE: Complete log of all operations
-
-This is TRUE Retrieval-Augmented Generation:
-- Retrieval: Query structured NIST data dynamically
-- Augmented: LLM generates appropriate query code
-- Generation: LLM formulates answer from real data
-
-No hardcoded queries, no static responses, no hallucinations! 🚀
-""")
-
 
 if __name__ == "__main__":
     try:
