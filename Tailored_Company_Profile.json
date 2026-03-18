@@ -1,0 +1,21 @@
+{
+    "industry": "healthcare",
+    "size": "small",
+    "employees": 35,
+    "data_types": [
+        "PHI",
+        "EHR",
+        "credit cards",
+        "employee PII"
+    ],
+    "data_sensitivity": "high",
+    "infrastructure": [
+        "cloud"
+    ],
+    "compliance_requirements": [
+        "HIPAA",
+        "PCI-DSS"
+    ],
+    "current_maturity": "basic",
+    "critical_assets": []
+}

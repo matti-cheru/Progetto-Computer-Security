@@ -474,7 +474,7 @@ Return ONLY JSON:
             'llm_request': {
                 'model': self.model_name,
                 'temperature': 0.0,
-                'max_tokens': 300,
+                'max_tokens': 800,
                 'messages': [
                     {"role": "system", "content": "You are a data extraction assistant. Return ONLY valid JSON, no other text."},
                     {"role": "user", "content": prompt}
@@ -496,7 +496,7 @@ Return ONLY JSON:
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.0,
-                max_tokens=300
+                max_tokens=800
             )
             
             raw_content = response.choices[0].message.content
