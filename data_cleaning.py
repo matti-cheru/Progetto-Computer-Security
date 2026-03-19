@@ -101,17 +101,41 @@ def clean_pf_to_sp800_53_mapping():
     
     print(f"📥 Dati originali: {df_raw.shape[0]} righe × {df_raw.shape[1]} colonne")
     
+    # Usa openpyxl per estrarre il mapping visivo della colonna F prima di pulire
+    import openpyxl
+    wb = openpyxl.load_workbook(file_path)
+    ws = wb['PF to SP 800-53r5']
+    rel_map = {}
+    for r in range(3, ws.max_row + 1):
+        subcat_val = ws.cell(row=r, column=4).value
+        # Filtriamo le stringhe valide che contengono ':' come 'ID.IM-P1: ...'
+        if subcat_val and isinstance(subcat_val, str) and ":" in subcat_val:
+            fill = ws.cell(row=r, column=6).fill
+            pat = fill.patternType
+            theme = fill.fgColor.theme if getattr(fill, 'fgColor', None) else None
+            
+            # Dal file: lightGray = Aligned, darkGray o solid theme=2 = Identical
+            rel_text = pd.NA
+            if pat == 'lightGray':
+                rel_text = "Aligned - The Privacy Framework Subcategory aligns with the Cybersecurity Framework Subcategory, but the text has been adapted for the Privacy Framework."
+            elif pat == 'darkGray' or (pat == 'solid' and str(theme) == '2'):
+                rel_text = "Identical - The Privacy Framework Subcategory is identical to the Cybersecurity Framework Subcategory."
+                
+            rel_map[subcat_val.strip()] = rel_text
+            
     # Le prime righe sono header, saltiamole
     df = df_raw.iloc[2:].copy()
     
-    # Rinomina le colonne basandoti sulla struttura osservata
+    # Elimina la prima colonna (che su Excel è solo una barra di colori, vuota)
+    df = df.drop(df.columns[0], axis=1)
+    
+    # Rinomina le colonne basandoti sulla struttura osservata (rimangono 8 colonne)
     df.columns = [
         'Function',
         'Category', 
         'Subcategory',
         'SP800_53_Controls',
         'Relationship_to_CSF',
-        'Key',
         'Additional_Info_1',
         'Additional_Info_2',
         'Crosswalk_Link'
@@ -128,6 +152,9 @@ def clean_pf_to_sp800_53_mapping():
     for col in df.columns:
         if df[col].dtype == 'object':
             df[col] = df[col].str.strip()
+            
+    # Associa la Relationship estratta tramite openpyxl
+    df['Relationship_to_CSF'] = df['Subcategory'].map(rel_map)
     
     # Estrai ID subcategory (es. "ID.IM-P1")
     df['Subcategory_ID'] = df['Subcategory'].str.extract(r'^([A-Z]{2}\.[A-Z]{2,3}-P\d+)', expand=False)
