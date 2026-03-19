@@ -74,7 +74,7 @@ class ManualPandasAgent:
         Returns:
             Prompt formattato per il modello
         """
-        # Informazioni sul dataframe
+        # Informazioni sul dataframe, TO DO, in base allo step della profilazione o alla domanda dirgli quale database interrogare
         df_info = f"""You have access to a pandas dataframe called `df` with the following structure:
 
 Shape: {df.shape[0]} rows × {df.shape[1]} columns
@@ -85,7 +85,7 @@ First 3 rows as reference:
 
 """
         
-        # Aggiungi informazioni sulle categorie se presente la colonna Category
+        # Aggiungi informazioni sulle categorie se presente la colonna Category, questa vosa e' valida solo per i primi due csv
         if 'Category' in df.columns:
             unique_categories = df['Category'].unique()
             categories_sample = list(unique_categories[:10])  # Prime 10 categorie
@@ -149,7 +149,7 @@ IMPORTANT RULES:
         
         # Se non ha keyword ReAct e sembra una risposta formattata (markdown table, lista, paragrafo)
         if not has_react_keywords:
-            # Cerca indicatori di risposta finale
+            # Cerca indicatori di risposta finale, TO DO indicatori hardcodati
             final_indicators = [
                 "subcategories related to",
                 "| subcategory_id |",  # Markdown table header

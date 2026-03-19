@@ -171,6 +171,10 @@ def load_csf_mapping() -> pd.DataFrame:
     loader = NISTDataLoader()
     return loader.load_csf_mapping()
 
+def load_pf_mapping() -> pd.DataFrame:
+    """Shortcut per caricare il mapping Privacy Framework."""
+    loader = NISTDataLoader()
+    return loader.load_pf_mapping()
 
 def load_sp800_53_catalog() -> pd.DataFrame:
     """Shortcut per caricare il catalogo SP 800-53."""
@@ -226,15 +230,17 @@ if __name__ == "__main__":
         print(f"   Risultati: {len(identify_controls)} subcategories")
         print(f"   Esempio: {identify_controls.iloc[0]['Subcategory_ID']} → {identify_controls.iloc[0]['SP800_53_Controls']}")
         
-        print("\n2️⃣ Trova la subcategory ID.AM-1:")
-        am1 = csf_df[csf_df['Subcategory_ID'] == 'ID.AM-1']
-        if not am1.empty:
-            print(f"   Descrizione: {am1.iloc[0]['Subcategory_Description']}")
-            print(f"   Controlli: {am1.iloc[0]['SP800_53_Controls']}")
+        pf_df = loader.load_pf_mapping()
         
+        print("\n2️⃣ Trova la relazone col CSF della subcategory Privacy Framework ID.IM-P1:")
+        pf_id_im_1 = pf_df[pf_df['Subcategory_ID'] == 'ID.IM-P1']
+        if not pf_id_im_1.empty:
+            print(f"   Relationship: {pf_id_im_1.iloc[0]['Relationship_to_CSF']}")
+            print(f"   Controlli: {pf_id_im_1.iloc[0]['SP800_53_Controls']}")
+
         sp_df = loader.load_sp800_53_catalog()
         
-        print("\n3️⃣ Trova il controllo AC-02:")
+        print("\n3️⃣ Trova il controllo AC-02 (SP 800-53):")
         ac02 = sp_df[sp_df['Control_ID'] == 'AC-02']
         if not ac02.empty:
             print(f"   Nome: {ac02.iloc[0]['Control_Name']}")

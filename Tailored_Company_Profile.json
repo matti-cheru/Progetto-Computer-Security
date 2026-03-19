@@ -1,21 +1,19 @@
 {
     "industry": "healthcare",
     "size": "small",
-    "employees": 35,
+    "employees": null,
     "data_types": [
+        "PII",
         "PHI",
-        "EHR",
-        "credit cards",
-        "employee PII"
+        "Payment card data"
     ],
-    "data_sensitivity": "high",
+    "data_sensitivity": "critical",
     "infrastructure": [
         "cloud"
     ],
     "compliance_requirements": [
-        "HIPAA",
-        "PCI-DSS"
+        "HIPAA"
     ],
-    "current_maturity": "basic",
+    "current_maturity": "intermediate",
     "critical_assets": []
 }

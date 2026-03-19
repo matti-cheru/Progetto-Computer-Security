@@ -130,19 +130,7 @@ def simulate_dialogue_scenario():
    - Conversation log saved in: {dialogue.run_dir}
 
 🔍 WHAT WAS DEMONSTRATED:
-   ✓ LLM-based information extraction from natural language
-   ✓ State management (company profile updated each turn)
-   ✓ ManualPandasAgent dynamic queries on NIST data
-   ✓ Direct method fast lookups
-   ✓ Full transparency: all prompts, responses, reasoning visible
-   ✓ ReAct format execution with code generation
-   ✓ Conversation history tracking
-
-💡 KEY INSIGHTS:
-   - System successfully extracted structured data from free-form responses
-   - Dialogue adapted to user's context (healthcare → HIPAA focus)
-   - NIST database queries executed correctly
-   - Full traceability of all operations
+   almost nothing
 
 📄 Check 'test_dialogue_log.json' for complete conversation record.
 📄 Check 'test_dialogue_detailed_log.json' for full prompt/reasoning/agent trace.
@@ -249,12 +237,6 @@ Choose test to run:
    2. Analyze LLM responses and code generation
    3. Evaluate control identification accuracy
    4. Consider implementing Phase 4: Evaluation & Metrics
-
-🎓 FOR PROJECT SUBMISSION:
-   - This demonstrates "Structured Dialogue Approach" ✓
-   - Shows "Interactive Extraction" ✓
-   - Implements true "RAG" with structured data ✓
-   - Provides "Actionable Recommendations" ✓
 
 Thank you for testing! 🚀
 """)

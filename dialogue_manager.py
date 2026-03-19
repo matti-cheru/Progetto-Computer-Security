@@ -20,11 +20,10 @@ from datetime import datetime
 from openai import OpenAI
 from nist_data_loader import NISTDataLoader
 from pandas_agent_manual import ManualPandasAgent
-from pandas_agent_core import NISTComplianceAgent
 
 
 class ConversationPhase(Enum):
-    """Fasi del dialogo strutturato"""
+    """Fasi del dialogo strutturato, probabilmente riguardo solo l'identificazione dell'azienda"""
     WELCOME = "welcome"
     INDUSTRY_IDENTIFICATION = "industry"
     SIZE_ASSESSMENT = "size"
@@ -39,7 +38,7 @@ class ConversationPhase(Enum):
 
 @dataclass
 class CompanyProfile:
-    """Profilo aziendale estratto dal dialogo"""
+    """Profilo aziendale estratto dal dialogo, da verificare se coincide con un simil ufficiale"""
     industry: Optional[str] = None
     size: Optional[str] = None  # small, medium, large
     employees: Optional[int] = None
@@ -72,12 +71,12 @@ class ConversationTurn:
 
 class NISTComplianceDialogueManager:
     """
-    Gestisce il dialogo strutturato per compliance NIST CSF 2.0.
+    Gestisce il dialogo strutturato per compliance NIST CSF 2.0, almeno un inizio.
     
     Orchestration Pattern:
-    - User input → LLM extraction → Update profile
-    - Based on profile → Query NIST data (ManualPandasAgent o Direct)
-    - Generate next question → Continue dialogue
+    - User input → LLM extraction → Update intial profile
+    - Based on initial profile → Query NIST data (ManualPandasAgent o Direct)
+    - Generate next question → Continue dialogue (molto vago)
     """
     
     def __init__(
@@ -133,12 +132,12 @@ class NISTComplianceDialogueManager:
             print(f"   ✅ ManualPandasAgent: Ready for dynamic queries")
         
         # 3. Direct Methods (Phase 2 - Fast operations)
-        self.direct_methods = NISTComplianceAgent(
-            base_url=base_url,
-            model_name=model_name,
-            api_key=api_key,
-            verbose=False
-        )
+ #       self.direct_methods = NISTComplianceAgent(
+#            base_url=base_url,
+#            model_name=model_name,
+#            api_key=api_key,
+#            verbose=False
+#        )
         
         if self.verbose:
             print(f"   ✅ DirectMethods: Ready for fast lookups")
