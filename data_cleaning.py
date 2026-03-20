@@ -248,6 +248,91 @@ def clean_sp800_53_catalog():
     return df
 
 
+def clean_csf_json_export():
+    """
+    Legge il file esportato in JSON del CSF e lo trasforma in un CSV piatto
+    con colonne simili agli altri mappers, sostituendo controls con implementation examples.
+    """
+    print("\n" + "="*70)
+    print("🧹 Pulizia: CSF JSON Export → CSV Piatto")
+    print("="*70)
+    
+    import json
+    file_path = "data/csf-export.json"
+    
+    with open(file_path, 'r', encoding='utf-8') as f:
+        json_data = json.load(f)
+        
+    elements = json_data['response']['elements']['elements']
+    
+    # Crea dizionari per un accesso rapido
+    functions = {x['element_identifier']: x for x in elements if x['element_type'] == 'function'}
+    categories = {x['element_identifier']: x for x in elements if x['element_type'] == 'category'}
+    subcategories = [x for x in elements if x['element_type'] == 'subcategory']
+    examples = [x for x in elements if x['element_type'] == 'implementation_example']
+    
+    print(f"📥 Nodi trovati: {len(functions)} Functions, {len(categories)} Categories, {len(subcategories)} Subcategories, {len(examples)} Examples")
+    
+    rows = []
+    
+    for sub in subcategories:
+        sub_id = sub.get('element_identifier', '')
+        sub_text = sub.get('text', '')
+        
+        # Trova Categoria genitore (es: da GV.OC-01 prendo GV.OC)
+        cat_id = sub_id.split('-')[0]
+        cat = categories.get(cat_id, {})
+        
+        # Trova Function genitore (es: da GV.OC prendo GV)
+        func_id = cat_id.split('.')[0]
+        func = functions.get(func_id, {})
+        
+        # Ricerca in base al path prefix per gli esempi (es: GV.OC-01.001)
+        sub_examples = [ex for ex in examples if ex['element_identifier'].startswith(sub_id + ".")]
+        
+        # Formatta i testi secondo le direttive del prompt
+        func_str = pd.NA
+        func_desc_str = pd.NA
+        if func:
+            func_title = func.get('title', '').upper()
+            func_str = f"{func_title} ({func_id})"
+            func_desc_str = func.get('text', '').strip()
+            
+        cat_str = pd.NA
+        if cat:
+            cat_str = f"{cat.get('title', '')} ({cat_id}): {cat.get('text', '')}".strip()
+            
+        # Unisci tutti gli esempi separati da newline
+        examples_strs = []
+        for ex in sub_examples:
+            # es: title potrebbe essere 'Ex1'
+            title = ex.get('title', '')
+            text = ex.get('text', '')
+            if title:
+                examples_strs.append(f"{title}: {text}")
+            else:
+                examples_strs.append(text)
+            
+        examples_final_str = "\n".join(examples_strs) if examples_strs else pd.NA
+        
+        rows.append({
+            'Function': func_str,
+            'Function_Description': func_desc_str,
+            'Category': cat_str,
+            'Subcategory_ID': sub_id,
+            'Subcategory_Description': sub_text,
+            'Implementation_Examples': examples_final_str
+        })
+        
+    df = pd.DataFrame(rows)
+    print(f"✅ Dati puliti convertiti in dataframe: {df.shape[0]} righe × {df.shape[1]} colonne")
+    
+    print(f"\n🔍 Esempi di dati puliti:")
+    print(df[['Subcategory_ID', 'Subcategory_Description']].head(3).to_string())
+    
+    return df
+
+
 def main():
     """
     Esegue la pulizia completa di tutti i dataset NIST
@@ -262,9 +347,10 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
     
     # Pulisci tutti i dataset
-    df_csf_mapping = clean_csf_to_sp800_53_mapping()
-    df_pf_mapping = clean_pf_to_sp800_53_mapping()
-    df_sp_catalog = clean_sp800_53_catalog()
+    # df_csf_mapping = clean_csf_to_sp800_53_mapping()
+    # df_pf_mapping = clean_pf_to_sp800_53_mapping()
+    # df_sp_catalog = clean_sp800_53_catalog()
+    df_csf_json = clean_csf_json_export()
     
     # Salva in formato CSV (più veloce di Excel per Pandas)
     print("\n" + "="*70)
@@ -272,9 +358,10 @@ def main():
     print("="*70)
     
     csv_files = {
-        'csf_to_sp800_53_mapping.csv': df_csf_mapping,
-        'pf_to_sp800_53_mapping.csv': df_pf_mapping,
-        'sp800_53_catalog.csv': df_sp_catalog
+        # 'csf_to_sp800_53_mapping.csv': df_csf_mapping,
+        # 'pf_to_sp800_53_mapping.csv': df_pf_mapping,
+        # 'sp800_53_catalog.csv': df_sp_catalog,
+        'csf_2_0_catalog.csv': df_csf_json
     }
     
     for filename, df in csv_files.items():
