@@ -27,8 +27,25 @@ class ProfileManager:
         Altrimenti, clona il catalogo CSF e aggiunge le colonne 
         necessarie per l'Organizational Profile e il tracciamento dello stato.
         """
+        # Profile columns that must always be treated as strings (not float64)
+        self._profile_columns = [
+            'Included_in_Profile', 'Rationale', 'Current_Priority',
+            'Current_Status', 'Current_Policies_Processes_Procedures',
+            'Current_Internal_Practices', 'Current_Roles_and_Responsibilities',
+            'Current_Selected_Informative_References', 'Current_Artifacts_and_Evidence',
+            'Target_Priority', 'Target_CSF_Tier',
+            'Target_Policies_Processes_Procedures', 'Target_Internal_Practices',
+            'Target_Roles_and_Responsibilities', 'Target_Selected_Informative_References',
+            'Notes', 'Considerations', 'Completion_Status',
+        ]
+
         if os.path.exists(self.state_path):
-            self.df = pd.read_csv(self.state_path)
+            # Force string dtype on profile columns to prevent float64 inference
+            # when columns are empty (all NaN → float64 by default)
+            dtype_overrides = {col: str for col in self._profile_columns}
+            self.df = pd.read_csv(self.state_path, dtype=dtype_overrides)
+            # Replace any residual NaN with empty string
+            self.df[self._profile_columns] = self.df[self._profile_columns].fillna('')
         else:
             print("Creazione del nuovo file di stato da zero...")
             if not os.path.exists(self.catalog_path):
