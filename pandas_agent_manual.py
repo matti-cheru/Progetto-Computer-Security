@@ -149,7 +149,12 @@ IMPORTANT RULES:
         
         # Se non ha keyword ReAct e sembra una risposta formattata (markdown table, lista, paragrafo)
         if not has_react_keywords:
-            # Cerca indicatori di risposta finale, TO DO indicatori hardcodati
+            # Risposta corta senza keyword ReAct → quasi certamente è la risposta diretta
+            # Es: il modello risponde solo "CM-8" dopo aver già eseguito il codice
+            if len(content.strip()) < 200:
+                return None, content.strip()
+
+            # Cerca indicatori di risposta finale per risposte più lunghe
             final_indicators = [
                 "subcategories related to",
                 "| subcategory_id |",  # Markdown table header

@@ -13,11 +13,12 @@ import pandas as pd
 import os
 
 class ProfileManager:
-    def __init__(self, catalog_path='data/cleaned/csf_2_0_catalog.csv', save_dir='data/cleaned', profile_name='client_profile_state.csv'):
+    def __init__(self, catalog_path='data/cleaned/csf_2_0_catalog.csv', save_dir='data/cleaned', profile_name='client_profile_state.csv', verbose=True):
         self.catalog_path = catalog_path
         self.save_dir = save_dir
         self.profile_name = profile_name
         self.state_path = os.path.join(self.save_dir, self.profile_name)
+        self.verbose = verbose
         self.df = None
         self._initialize_state()
 
@@ -86,9 +87,29 @@ class ProfileManager:
     def save_state(self):
         """Salva il DataFrame corrente nel file CSV di stato."""
         # Creiamo la cartella se non esiste
-        os.makedirs(os.path.dirname(self.state_path), exist_ok=True)
+        parent = os.path.dirname(self.state_path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
         self.df.to_csv(self.state_path, index=False)
-        print(f"Stato salvato in {self.state_path}")
+        if self.verbose:
+            print(f"Stato salvato in {self.state_path}")
+
+    def create_fresh_copy(self, dest_path: str):
+        """
+        Creates a brand-new blank profile at dest_path from the catalog,
+        and switches this manager to operate on that copy.
+        """
+        if not os.path.exists(self.catalog_path):
+            raise FileNotFoundError(f"Il catalogo {self.catalog_path} non esiste.")
+        self.df = pd.read_csv(self.catalog_path)
+        for col in self._profile_columns:
+            if col == 'Completion_Status':
+                self.df[col] = 'PENDING'
+            else:
+                self.df[col] = ''
+        self.state_path = dest_path
+        self.save_state()
+        return self.state_path
 
     def get_next_pending(self):
         """

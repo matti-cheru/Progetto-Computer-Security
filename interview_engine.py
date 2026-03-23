@@ -2,15 +2,19 @@
 INTERVIEW ENGINE - Phase 1+2: Core Interview Loop + Structured Extraction
 
 Orchestrates the NIST CSF 2.0 compliance interview by:
+- Managing compilation sessions (new / resume) in a Compilazioni/ folder
 - Pulling the next PENDING subcategory from ProfileManager
+- Fetching enriched context from CSF catalog and SP800-53 mappings
 - Building a professional, contextualized question via LLM
 - Extracting structured data from the user's free-text answer
-- Saving progress incrementally to client_profile_state.csv
+- Saving progress incrementally to the session's profile CSV
 
 Supports verbose and non-verbose modes with full JSON logging.
 """
 import os
+import re
 import json
+import shutil
 from typing import Dict, List, Optional, Any, Set
 from datetime import datetime
 
@@ -18,6 +22,25 @@ import pandas as pd
 from openai import OpenAI
 
 from profile_manager import ProfileManager
+from pandas_agent_manual import ManualPandasAgent
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  DATA PATHS
+# ═══════════════════════════════════════════════════════════════════
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data", "cleaned")
+CSF_CATALOG_PATH = os.path.join(DATA_DIR, "csf_2_0_catalog.csv")
+CSF_SP800_MAPPING_PATH = os.path.join(DATA_DIR, "csf_to_sp800_53_mapping.csv")
+SP800_CATALOG_PATH = os.path.join(DATA_DIR, "sp800_53_catalog.csv")
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  CONSTANTS
+# ═══════════════════════════════════════════════════════════════════
+
+COMPILAZIONI_DIR = os.path.join(os.getcwd(), "Compilazioni")
+PROFILE_FILENAME_PREFIX = "profile_"
+PROFILE_FILENAME_SUFFIX = ".csv"
 
 
 class InterviewEngine:
@@ -61,6 +84,13 @@ class InterviewEngine:
 
     ALL_PROFILE_COLUMNS = CURRENT_PROFILE_COLUMNS + TARGET_PROFILE_COLUMNS
 
+    # ── LLM parameters ──────────────────────────────────────────────
+    # The extraction call needs very high max_tokens because reasoning
+    # models (like gpt-oss) can consume thousands of tokens on internal
+    # reasoning loops before producing the visible JSON output.
+    EXTRACTION_MAX_TOKENS = 4096
+    EXTRACTION_RETRIES = 3
+
     def __init__(
         self,
         base_url: str = "https://gpustack.ing.unibs.it/v1",
@@ -87,25 +117,35 @@ class InterviewEngine:
         self.model_name = model_name
         self.client = OpenAI(base_url=base_url, api_key=api_key)
 
-        # ProfileManager handles state persistence
-        self.manager = ProfileManager()
+        # ProfileManager will be initialized during session selection
+        self.manager: Optional[ProfileManager] = None
 
-        # Run-level logging directory
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.log_dir = log_dir or os.path.join(os.getcwd(), f"interview_run_{ts}")
-        os.makedirs(self.log_dir, exist_ok=True)
+        # Run-level logging directory (set during session selection)
+        self.log_dir = log_dir
 
         # Accumulated interview log (saved at each turn)
         self._turn_logs: List[Dict[str, Any]] = []
 
-        self._print_always(
-            "\n" + "=" * 70
-            + "\n🛡️  NIST CSF 2.0 — Interview Engine initialized"
-            + f"\n   Model: {model_name}"
-            + f"\n   Log dir: {self.log_dir}"
-            + f"\n   Scope: {self.SCOPE_SUBCATEGORIES or 'ALL subcategories'}"
-            + "\n" + "=" * 70
+        # ── Load reference data for catalog context ──────────────
+        self._csf_catalog = self._load_csv_safe(CSF_CATALOG_PATH)
+        self._sp800_mapping = self._load_csv_safe(CSF_SP800_MAPPING_PATH)
+        self._sp800_catalog = self._load_csv_safe(SP800_CATALOG_PATH)
+
+        # ── Pandas Agent for catalog context queries ───────────
+        self._pandas_agent = ManualPandasAgent(
+            base_url=base_url,
+            model_name=model_name,
+            api_key=api_key,
+            temperature=0.0,
+            verbose=verbose,   # follow the engine's verbosity
         )
+
+    @staticmethod
+    def _load_csv_safe(path: str) -> Optional[pd.DataFrame]:
+        """Load a CSV file, returning None if it doesn't exist."""
+        if os.path.exists(path):
+            return pd.read_csv(path, dtype=str)
+        return None
 
     # ═══════════════════════════════════════════════════════════════
     #  PUBLIC API
@@ -113,13 +153,193 @@ class InterviewEngine:
 
     def start(self):
         """
-        Main entry point.  Runs the interview loop until all in-scope
-        subcategories are DONE, the user types /quit, or there are no
-        more PENDING items.
+        Main entry point.
+        1. Ask user: new compilation or resume existing
+        2. Run the interview loop
+        """
+        self._print_always(
+            "\n" + "=" * 62
+            + "\n🛡️  NIST CSF 2.0 — Interview Engine"
+            + f"\n   Model: {self.model_name}"
+            + "\n" + "=" * 62
+        )
+
+        # ── Session selection ────────────────────────────────────
+        session_path = self._session_selection()
+        if session_path is None:
+            self._print_always("\n👋 Goodbye!")
+            return
+
+        # Initialize ProfileManager on the selected session file
+        # verbose=False suppresses internal "Stato salvato" messages
+        self.manager = ProfileManager(
+            profile_name=os.path.basename(session_path),
+            save_dir=os.path.dirname(session_path),
+            verbose=False,
+        )
+
+        # Setup log directory alongside the profile
+        if self.log_dir is None:
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            self.log_dir = os.path.join(
+                os.path.dirname(session_path), f"logs_{ts}"
+            )
+        os.makedirs(self.log_dir, exist_ok=True)
+
+        self._print_always(f"   Profile: {session_path}")
+        self._print_always(f"   Logs:    {self.log_dir}")
+        self._print_always(
+            f"   Scope:   {sorted(self.SCOPE_SUBCATEGORIES) if self.SCOPE_SUBCATEGORIES else 'ALL subcategories'}"
+        )
+
+        # ── Interview loop ───────────────────────────────────────
+        self._run_interview_loop()
+
+    # ═══════════════════════════════════════════════════════════════
+    #  SESSION MANAGEMENT
+    # ═══════════════════════════════════════════════════════════════
+
+    def _session_selection(self) -> Optional[str]:
+        """
+        Prompts user to start a new compilation or resume an existing one.
+        Returns the path to the profile CSV, or None to exit.
+        """
+        os.makedirs(COMPILAZIONI_DIR, exist_ok=True)
+
+        # Find existing compilations
+        existing = self._list_compilations()
+
+        self._print_always(
+            "\n╔════════════════════════════════════════════════════════════╗"
+            "\n║           Select Compilation Mode                        ║"
+            "\n╠════════════════════════════════════════════════════════════╣"
+        )
+
+        if existing:
+            self._print_always(
+                "║                                                          ║"
+                "\n║  [N] Start a NEW compilation                             ║"
+                "\n║  [R] Resume an existing compilation                      ║"
+                "\n║  [Q] Quit                                                ║"
+                "\n║                                                          ║"
+                "\n╚════════════════════════════════════════════════════════════╝"
+            )
+        else:
+            self._print_always(
+                "║                                                          ║"
+                "\n║  No existing compilations found.                         ║"
+                "\n║  A new compilation will be created.                      ║"
+                "\n║                                                          ║"
+                "\n╚════════════════════════════════════════════════════════════╝"
+            )
+            return self._create_new_session()
+
+        while True:
+            choice = input("\nYour choice [N/R/Q] ▶ ").strip().upper()
+
+            if choice == "Q":
+                return None
+
+            if choice == "N":
+                return self._create_new_session()
+
+            if choice == "R":
+                return self._resume_session(existing)
+
+            self._print_always("⚠️  Invalid choice. Please enter N, R, or Q.")
+
+    def _list_compilations(self) -> List[Dict[str, Any]]:
+        """Lists all existing compilation files in Compilazioni/."""
+        compilations = []
+        if not os.path.exists(COMPILAZIONI_DIR):
+            return compilations
+
+        for fname in sorted(os.listdir(COMPILAZIONI_DIR)):
+            if fname.startswith(PROFILE_FILENAME_PREFIX) and fname.endswith(PROFILE_FILENAME_SUFFIX):
+                fpath = os.path.join(COMPILAZIONI_DIR, fname)
+                try:
+                    # Quick peek at progress
+                    df = pd.read_csv(fpath, usecols=["Completion_Status"], dtype={"Completion_Status": str})
+                    total = len(df)
+                    done = (df["Completion_Status"] == "DONE").sum()
+                    pct = (done / total * 100) if total > 0 else 0
+
+                    # Extract timestamp from filename
+                    ts_match = re.search(r"(\d{8}_\d{6})", fname)
+                    ts_str = ts_match.group(1) if ts_match else "unknown"
+
+                    compilations.append({
+                        "filename": fname,
+                        "path": fpath,
+                        "timestamp": ts_str,
+                        "done": done,
+                        "total": total,
+                        "percentage": pct,
+                    })
+                except Exception:
+                    pass  # Skip corrupt files
+
+        return compilations
+
+    def _create_new_session(self) -> str:
+        """Creates a fresh profile CSV in Compilazioni/ with a timestamp."""
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        fname = f"{PROFILE_FILENAME_PREFIX}{ts}{PROFILE_FILENAME_SUFFIX}"
+        dest_path = os.path.join(COMPILAZIONI_DIR, fname)
+
+        # Use ProfileManager to create a pristine copy from the catalog
+        temp_manager = ProfileManager(verbose=False)
+        temp_manager.create_fresh_copy(dest_path)
+
+        self._print_always(f"\n✅ New compilation created: {fname}")
+        return dest_path
+
+    def _resume_session(self, compilations: List[Dict[str, Any]]) -> Optional[str]:
+        """Shows existing compilations and lets user pick one."""
+        self._print_always("\n📂 Existing compilations:\n")
+        for i, comp in enumerate(compilations, 1):
+            dt = comp["timestamp"]
+            # Format timestamp nicely
+            try:
+                dt_formatted = datetime.strptime(dt, "%Y%m%d_%H%M%S").strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                dt_formatted = dt
+            self._print_always(
+                f"   [{i}] {comp['filename']}"
+                f"\n       Created: {dt_formatted}"
+                f"\n       Progress: {comp['done']}/{comp['total']} ({comp['percentage']:.0f}%)"
+                f"\n"
+            )
+
+        while True:
+            choice = input(f"Select compilation [1-{len(compilations)}] or Q to go back ▶ ").strip()
+
+            if choice.upper() == "Q":
+                return self._session_selection()
+
+            try:
+                idx = int(choice) - 1
+                if 0 <= idx < len(compilations):
+                    selected = compilations[idx]
+                    self._print_always(f"\n✅ Resuming: {selected['filename']}")
+                    return selected["path"]
+                else:
+                    self._print_always(f"⚠️  Please enter a number between 1 and {len(compilations)}.")
+            except ValueError:
+                self._print_always("⚠️  Invalid input. Enter a number or Q.")
+
+    # ═══════════════════════════════════════════════════════════════
+    #  INTERVIEW LOOP
+    # ═══════════════════════════════════════════════════════════════
+
+    def _run_interview_loop(self):
+        """
+        Runs the interview loop until all in-scope subcategories are
+        DONE, the user types /quit, or there are no more PENDING items.
         """
         self._print_always(
             "\n╔════════════════════════════════════════════════════════════╗"
-            "\n║  NIST CSF 2.0 Organizational Profile — Interview Start   ║"
+            "\n║  Interview Started                                       ║"
             "\n╠════════════════════════════════════════════════════════════╣"
             "\n║  Commands:                                                ║"
             "\n║   /progress  — Show completion progress                  ║"
@@ -146,8 +366,11 @@ class InterviewEngine:
                 subcategory_id, {"Completion_Status": "IN_PROGRESS"}
             )
 
+            # Fetch enriched catalog context for this subcategory
+            catalog_ctx, catalog_ctx_trace = self._fetch_catalog_context(subcategory_id)
+
             # Build and show question
-            question, question_trace = self._build_question(row)
+            question, question_trace = self._build_question(row, catalog_ctx)
             self._print_always(f"\n{'─' * 60}")
             self._print_always(f"📋 Subcategory: {subcategory_id}")
             self._print_always(f"{'─' * 60}")
@@ -192,8 +415,10 @@ class InterviewEngine:
                 )
                 continue
 
-            # Extract structured response
-            extracted, extraction_trace = self._extract_response(row, user_input)
+            # Extract structured response (with retry)
+            extracted, extraction_trace = self._extract_response(
+                row, user_input, catalog_ctx
+            )
 
             # Show extracted data to user for transparency
             self._print_always(f"\n📊 Extracted profile data for {subcategory_id}:")
@@ -217,6 +442,7 @@ class InterviewEngine:
                     "Subcategory_Description": row.get("Subcategory_Description", ""),
                     "Implementation_Examples": row.get("Implementation_Examples", ""),
                 },
+                "catalog_context": catalog_ctx_trace,
                 "question_generation": question_trace,
                 "user_answer": user_input,
                 "extraction": extraction_trace,
@@ -248,13 +474,198 @@ class InterviewEngine:
         return in_scope.iloc[0].to_dict()
 
     # ═══════════════════════════════════════════════════════════════
+    #  INTERNAL — Catalog context enrichment
+    # ═══════════════════════════════════════════════════════════════
+
+    @staticmethod
+    def _normalize_subcategory_id(sub_id: str) -> str:
+        """
+        Normalize subcategory ID between CSF 2.0 format (ID.AM-01)
+        and the mapping file format (ID.AM-1), stripping leading zeros.
+        Returns the version WITHOUT leading zeros (e.g. ID.AM-1).
+        """
+        # "ID.AM-01" → "ID.AM-1"
+        return re.sub(r'-0*(\d+)$', r'-\1', sub_id)
+
+    @staticmethod
+    def _normalize_control_id(ctrl_id: str) -> str:
+        """
+        Normalize SP800-53 control IDs.
+        Mapping uses 'CM-8', catalog uses 'CM-08'.
+        Returns the version WITH leading zeros (e.g. CM-08).
+        """
+        # "CM-8" → "CM-08"  (pad to 2 digits)
+        def _pad(m):
+            return f"-{m.group(1).zfill(2)}"
+        return re.sub(r'-(?!\d{2})(?!\()(\d+)', _pad, ctrl_id.strip())
+
+    def _fetch_catalog_context(
+        self, subcategory_id: str
+    ) -> tuple:
+        """
+        Fetches enriched context for a subcategory using the Pandas Agent.
+        Each lookup goes through the full ReAct pipeline so the user can
+        see: prompt → reasoning → generated code → execution result.
+
+        Steps:
+        1. CSF catalog: description + examples from csf_2_0_catalog.csv
+        2. SP800-53 mapping: control IDs from csf_to_sp800_53_mapping.csv
+        3. SP800-53 details: control names + statements from sp800_53_catalog.csv
+
+        Returns:
+            (context_dict, trace_dict)
+        """
+        ctx: Dict[str, Any] = {
+            "catalog_description": "",
+            "catalog_examples": "",
+            "sp800_controls": [],
+        }
+        trace: Dict[str, Any] = {
+            "subcategory_id": subcategory_id,
+            "pandas_agent_queries": [],
+        }
+
+        # ---- Step 1: CSF Catalog lookup via Pandas Agent ----
+        if self._csf_catalog is not None:
+            question_1 = (
+                f"Get the Subcategory_Description and Implementation_Examples "
+                f"for the row where Subcategory_ID == '{subcategory_id}'. "
+                f"Return them as a string."
+            )
+            self._print_verbose(f"\n📚 [Pandas Agent] Step 1: CSF Catalog lookup for {subcategory_id}")
+
+            agent_result_1 = self._pandas_agent.query(
+                df=self._csf_catalog,
+                question=question_1,
+                max_iterations=3,
+            )
+
+            trace["pandas_agent_queries"].append({
+                "step": "csf_catalog_lookup",
+                "question": question_1,
+                "success": agent_result_1["success"],
+                "answer": agent_result_1.get("answer", ""),
+                "iterations": agent_result_1["iterations"],
+                "history": agent_result_1.get("history", []),
+            })
+
+            # Also do a direct lookup to populate ctx reliably
+            # (the agent answer is for logging/transparency,
+            #  the direct lookup ensures we always have the data)
+            cat_rows = self._csf_catalog[
+                self._csf_catalog["Subcategory_ID"] == subcategory_id
+            ]
+            if not cat_rows.empty:
+                row = cat_rows.iloc[0]
+                desc = row.get("Subcategory_Description", "")
+                examples_raw = row.get("Implementation_Examples", "")
+                if pd.isna(desc):
+                    desc = ""
+                if pd.isna(examples_raw):
+                    examples_raw = ""
+                ctx["catalog_description"] = desc
+                ctx["catalog_examples"] = examples_raw
+
+        # ---- Step 2: SP800-53 mapping lookup via Pandas Agent ----
+        normalized_id = self._normalize_subcategory_id(subcategory_id)
+        raw_controls = []
+
+        if self._sp800_mapping is not None:
+            question_2 = (
+                f"Get the SP800_53_Controls column value for the row where "
+                f"Subcategory_ID == '{normalized_id}'. Return just the value."
+            )
+            self._print_verbose(f"\n📚 [Pandas Agent] Step 2: SP800-53 mapping for {normalized_id}")
+
+            agent_result_2 = self._pandas_agent.query(
+                df=self._sp800_mapping,
+                question=question_2,
+                max_iterations=3,
+            )
+
+            trace["pandas_agent_queries"].append({
+                "step": "sp800_mapping_lookup",
+                "normalized_id": normalized_id,
+                "question": question_2,
+                "success": agent_result_2["success"],
+                "answer": agent_result_2.get("answer", ""),
+                "iterations": agent_result_2["iterations"],
+                "history": agent_result_2.get("history", []),
+            })
+
+            # Direct lookup for reliable data extraction
+            map_rows = self._sp800_mapping[
+                self._sp800_mapping["Subcategory_ID"] == normalized_id
+            ]
+            if not map_rows.empty:
+                controls_str = map_rows.iloc[0].get("SP800_53_Controls", "")
+                if pd.isna(controls_str):
+                    controls_str = ""
+                raw_controls = [c.strip() for c in controls_str.split(",") if c.strip()]
+
+        # ---- Step 3: SP800-53 catalog detail lookup via Pandas Agent ----
+        if self._sp800_catalog is not None and raw_controls:
+            # Normalize control IDs for lookup
+            norm_controls = [self._normalize_control_id(c) for c in raw_controls]
+            controls_filter = ", ".join(f"'{c}'" for c in norm_controls)
+
+            question_3 = (
+                f"Get Control_ID, Control_Name, and Control_Statement for rows where "
+                f"Control_ID is in [{controls_filter}]. Return as a table."
+            )
+            self._print_verbose(f"\n📚 [Pandas Agent] Step 3: SP800-53 catalog details for {norm_controls}")
+
+            agent_result_3 = self._pandas_agent.query(
+                df=self._sp800_catalog,
+                question=question_3,
+                max_iterations=3,
+            )
+
+            trace["pandas_agent_queries"].append({
+                "step": "sp800_catalog_lookup",
+                "control_ids_queried": norm_controls,
+                "question": question_3,
+                "success": agent_result_3["success"],
+                "answer": agent_result_3.get("answer", ""),
+                "iterations": agent_result_3["iterations"],
+                "history": agent_result_3.get("history", []),
+            })
+
+            # Direct lookup for reliable data
+            control_details = []
+            for norm_ctrl in norm_controls:
+                ctrl_rows = self._sp800_catalog[
+                    self._sp800_catalog["Control_ID"] == norm_ctrl
+                ]
+                if not ctrl_rows.empty:
+                    crow = ctrl_rows.iloc[0]
+                    detail = {
+                        "control_id": norm_ctrl,
+                        "control_name": crow.get("Control_Name", ""),
+                        "control_statement": crow.get("Control_Statement", "")[:500],
+                    }
+                    control_details.append(detail)
+            ctx["sp800_controls"] = control_details
+
+        self._print_verbose(f"\n📚 [Catalog Context Summary] {subcategory_id}:")
+        self._print_verbose(f"   Description: {ctx['catalog_description'][:100]}...")
+        self._print_verbose(f"   Examples: {'Yes' if ctx['catalog_examples'] else 'No'}")
+        self._print_verbose(
+            f"   SP800-53 Controls: {[c['control_id'] for c in ctx['sp800_controls']]}"
+        )
+
+        return ctx, trace
+
+    # ═══════════════════════════════════════════════════════════════
     #  INTERNAL — Question building
     # ═══════════════════════════════════════════════════════════════
 
-    def _build_question(self, row: Dict) -> tuple:
+    def _build_question(
+        self, row: Dict, catalog_ctx: Optional[Dict] = None
+    ) -> tuple:
         """
         Uses the LLM to formulate a clear, professional interview question
-        from the subcategory's catalog data.
+        from the subcategory's catalog data, enriched with SP800-53 context.
 
         Returns:
             (question_text, trace_dict)
@@ -263,6 +674,19 @@ class InterviewEngine:
         category = row.get("Category", "")
         description = row.get("Subcategory_Description", "")
         examples = row.get("Implementation_Examples", "")
+
+        # Handle NaN in examples
+        if pd.isna(examples) or str(examples).strip().lower() == "nan":
+            examples = "No specific implementation examples available."
+
+        # Build SP800-53 controls context
+        sp800_section = ""
+        if catalog_ctx and catalog_ctx.get("sp800_controls"):
+            controls_text = "\n".join(
+                f"  - {c['control_id']} ({c['control_name']}): {c['control_statement'][:200]}"
+                for c in catalog_ctx["sp800_controls"]
+            )
+            sp800_section = f"\nRELATED NIST SP 800-53 CONTROLS:\n{controls_text}\n"
 
         prompt = f"""You are a professional cybersecurity auditor conducting a NIST CSF 2.0 compliance interview.
 
@@ -273,12 +697,20 @@ SUBCATEGORY DETAILS:
 - Category: {category}
 - Description: {description}
 - Implementation Examples: {examples}
-
+{sp800_section}
 INSTRUCTIONS:
 1. Ask about their CURRENT state regarding this subcategory
 2. Be specific but not overwhelming — ask one focused question
 3. Briefly explain what this subcategory is about so the interviewee understands the context
-4. Encourage them to describe: what they currently do, any policies/procedures, who is responsible, and any evidence/artifacts they have
+4. The question MUST explicitly ask the interviewee to provide information about ALL of the following areas:
+   a) Whether this area is applicable/relevant to their organization
+   b) The PRIORITY they assign to this area (High, Medium, or Low)
+   c) Their current implementation status
+   d) Any formal policies, processes, or procedures in place
+   e) Internal or informal practices being followed
+   f) Who is responsible (roles and responsibilities)
+   g) Any standards, frameworks, or informative references they follow for this area (e.g. ISO 27001, NIST SP 800-53, sector-specific regulations, or any other relevant standard for their industry/context)
+   h) Any documentary evidence or artifacts they can provide
 5. Keep the tone professional but approachable
 6. Write ONLY the question, no preamble or extra text
 
@@ -306,7 +738,7 @@ Question:"""
                 model=self.model_name,
                 messages=messages,
                 temperature=0.7,
-                max_tokens=700,
+                max_tokens=900,
             )
 
             content = response.choices[0].message.content or ""
@@ -335,18 +767,23 @@ Question:"""
             fallback = (
                 f"Please describe your organization's current practices regarding "
                 f"'{description}' ({subcategory_id}). "
-                f"Include any relevant policies, responsibilities, and evidence."
+                f"Include: priority (High/Medium/Low), policies, practices, "
+                f"responsibilities, informative references, and evidence."
             )
             return fallback, trace
 
     # ═══════════════════════════════════════════════════════════════
-    #  INTERNAL — Response extraction
+    #  INTERNAL — Response extraction (with retry)
     # ═══════════════════════════════════════════════════════════════
 
-    def _extract_response(self, row: Dict, user_answer: str) -> tuple:
+    def _extract_response(
+        self, row: Dict, user_answer: str,
+        catalog_ctx: Optional[Dict] = None,
+    ) -> tuple:
         """
         Uses the LLM to extract structured profile data from the user's
-        free-text answer, mapping it to the Current_* profile columns.
+        free-text answer.  Retries up to EXTRACTION_RETRIES times if
+        the model returns empty content (reasoning consumed all tokens).
 
         Returns:
             (extracted_dict, trace_dict)
@@ -355,48 +792,47 @@ Question:"""
         category = row.get("Category", "")
         description = row.get("Subcategory_Description", "")
 
-        # Build the extraction prompt with explicit column definitions
-        prompt = f"""You are a cybersecurity compliance data extraction assistant.
+        # Build SP800-53 context for extraction guidance
+        sp800_hint = ""
+        if catalog_ctx and catalog_ctx.get("sp800_controls"):
+            ctrl_list = ", ".join(
+                f"{c['control_id']} ({c['control_name']})"
+                for c in catalog_ctx["sp800_controls"]
+            )
+            sp800_hint = (
+                f"\nNOTE: The related NIST SP 800-53 controls for this subcategory are: {ctrl_list}.\n"
+                f"If the user mentions any of these or other standards/frameworks, include them in "
+                f"Current_Selected_Informative_References.\n"
+            )
 
-CONTEXT:
-The user has answered an interview question about NIST CSF 2.0 subcategory:
-- ID: {subcategory_id}
-- Category: {category}
-- Description: {description}
+        prompt = f"""Extract structured data from this interview answer about NIST CSF 2.0 subcategory {subcategory_id} ({description}).
+{sp800_hint}
+ANSWER: "{user_answer}"
 
-USER'S ANSWER:
-"{user_answer}"
-
-YOUR TASK:
-Extract and organize the user's answer into the following structured fields.
-For each field, extract the relevant information from the answer.
-If the answer does not contain information for a field, write "Not specified" for that field.
-
-Return ONLY a valid JSON object with these exact keys:
+Return ONLY this JSON (no markdown, no explanation):
 
 {{
-    "Included_in_Profile": "Yes or No — whether this subcategory is relevant to the organization",
-    "Rationale": "Brief justification for inclusion/exclusion",
-    "Current_Priority": "High, Medium, Low, or N/A — how important this area is currently",
-    "Current_Status": "Brief description of the current state of implementation",
-    "Current_Policies_Processes_Procedures": "Any formal policies, processes, or procedures in place",
-    "Current_Internal_Practices": "Informal or internal practices being followed",
-    "Current_Roles_and_Responsibilities": "Who is responsible for this area",
-    "Current_Selected_Informative_References": "Any standards, frameworks, or references currently used",
-    "Current_Artifacts_and_Evidence": "Any documentation, logs, or evidence available"
+    "Included_in_Profile": "Yes or No",
+    "Rationale": "Brief justification",
+    "Current_Priority": "High/Medium/Low, or 'Not specified' if user didn't say",
+    "Current_Status": "Implementation status",
+    "Current_Policies_Processes_Procedures": "Formal policies/procedures",
+    "Current_Internal_Practices": "Informal practices and tools used",
+    "Current_Roles_and_Responsibilities": "Who is responsible",
+    "Current_Selected_Informative_References": "Only standards/frameworks/regulations the user explicitly named (e.g. ISO 27001, NIST SP 800-53). Put tools in Internal_Practices instead.",
+    "Current_Artifacts_and_Evidence": "Documentation and evidence"
 }}
 
-IMPORTANT:
-- Return ONLY valid JSON, no markdown, no explanation
-- Be concise but accurate
-- Map the user's natural language to the correct fields
-- If the user clearly indicates this area is not applicable, set Included_in_Profile to "No"
-"""
+Rules: Use 'Not specified' for missing fields. Only extract what the user actually said."""
 
         messages = [
             {
                 "role": "system",
-                "content": "You are a data extraction assistant. Return ONLY valid JSON, no other text.",
+                "content": (
+                    "You are a data extraction assistant. "
+                    "Think briefly, then output ONLY valid JSON. "
+                    "Do not over-analyze or repeat yourself."
+                ),
             },
             {"role": "user", "content": prompt},
         ]
@@ -406,64 +842,92 @@ IMPORTANT:
             "messages": messages,
             "model": self.model_name,
             "user_answer": user_answer,
+            "attempts": [],
         }
 
         self._print_verbose("\n🔍 [Response Extraction] Sending to LLM...")
         self._print_verbose(f"   User answer: {user_answer[:100]}...")
 
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model_name,
-                messages=messages,
-                temperature=0.0,
-                max_tokens=800,
-            )
+        # Retry loop: reasoning models may consume all tokens on reasoning
+        for attempt in range(1, self.EXTRACTION_RETRIES + 1):
+            attempt_trace = {"attempt": attempt}
 
-            raw_content = response.choices[0].message.content or ""
-            reasoning = getattr(response.choices[0].message, "reasoning_content", None)
-            content = raw_content.strip()
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=messages,
+                    temperature=0.0,
+                    max_tokens=self.EXTRACTION_MAX_TOKENS,
+                )
 
-            trace["response"] = {
-                "content": raw_content,
-                "reasoning_content": reasoning,
-                "tokens": {
-                    "input": response.usage.prompt_tokens,
-                    "output": response.usage.completion_tokens,
-                },
-            }
+                raw_content = response.choices[0].message.content or ""
+                reasoning = getattr(response.choices[0].message, "reasoning_content", None)
+                content = raw_content.strip()
 
-            self._print_verbose(f"   ✅ Raw response: {len(content)} chars")
-            self._print_verbose(f"   Tokens — in: {response.usage.prompt_tokens}, out: {response.usage.completion_tokens}")
-            if reasoning:
-                self._print_verbose(f"   🧠 Reasoning: {reasoning[:200]}...")
-            self._print_verbose(f"   Raw content:\n{content}")
+                attempt_trace["response"] = {
+                    "content": raw_content,
+                    "reasoning_content": reasoning,
+                    "tokens": {
+                        "input": response.usage.prompt_tokens,
+                        "output": response.usage.completion_tokens,
+                    },
+                }
 
-            # Clean markdown code blocks if present
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0].strip()
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0].strip()
+                self._print_verbose(
+                    f"   [Attempt {attempt}/{self.EXTRACTION_RETRIES}] "
+                    f"Raw response: {len(content)} chars, "
+                    f"Tokens — in: {response.usage.prompt_tokens}, out: {response.usage.completion_tokens}"
+                )
+                if reasoning:
+                    self._print_verbose(f"   🧠 Reasoning: {reasoning[:200]}...")
 
-            extracted = json.loads(content)
-            trace["parsed"] = extracted
+                # If content is empty, reasoning consumed all tokens → retry
+                if not content:
+                    self._print_verbose(
+                        f"   ⚠️  Empty content (reasoning consumed all tokens). "
+                        f"{'Retrying...' if attempt < self.EXTRACTION_RETRIES else 'Using fallback.'}"
+                    )
+                    attempt_trace["error"] = "Empty content — reasoning consumed all tokens"
+                    trace["attempts"].append(attempt_trace)
+                    continue
 
-            # Validate: only keep known columns
-            validated = {}
-            for col in self.CURRENT_PROFILE_COLUMNS:
-                validated[col] = extracted.get(col, "Not specified")
+                self._print_verbose(f"   Raw content:\n{content}")
 
-            return validated, trace
+                # Clean markdown code blocks if present
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0].strip()
 
-        except json.JSONDecodeError as e:
-            self._print_verbose(f"   ❌ JSON parse error: {e}")
-            trace["error"] = f"JSONDecodeError: {e}"
-            # Fallback: store raw answer
-            return self._fallback_extraction(user_answer), trace
+                extracted = json.loads(content)
+                attempt_trace["parsed"] = extracted
+                trace["attempts"].append(attempt_trace)
 
-        except Exception as e:
-            self._print_verbose(f"   ❌ LLM error: {e}")
-            trace["error"] = str(e)
-            return self._fallback_extraction(user_answer), trace
+                # Validate: only keep known columns
+                validated = {}
+                for col in self.CURRENT_PROFILE_COLUMNS:
+                    validated[col] = extracted.get(col, "Not specified")
+
+                trace["success"] = True
+                return validated, trace
+
+            except json.JSONDecodeError as e:
+                self._print_verbose(f"   ❌ JSON parse error: {e}")
+                attempt_trace["error"] = f"JSONDecodeError: {e}"
+                trace["attempts"].append(attempt_trace)
+                # Don't retry on JSON errors — the content exists but is malformed
+                break
+
+            except Exception as e:
+                self._print_verbose(f"   ❌ LLM error: {e}")
+                attempt_trace["error"] = str(e)
+                trace["attempts"].append(attempt_trace)
+                break
+
+        # All attempts exhausted → fallback
+        self._print_verbose("   ⚠️  Using fallback extraction (raw answer saved).")
+        trace["success"] = False
+        return self._fallback_extraction(user_answer), trace
 
     def _fallback_extraction(self, user_answer: str) -> Dict[str, str]:
         """
@@ -518,7 +982,8 @@ IMPORTANT:
         log_data = {
             "run_timestamp": datetime.now().isoformat(),
             "model": self.model_name,
-            "scope": list(self.SCOPE_SUBCATEGORIES) if self.SCOPE_SUBCATEGORIES else "ALL",
+            "profile_path": self.manager.state_path,
+            "scope": sorted(self.SCOPE_SUBCATEGORIES) if self.SCOPE_SUBCATEGORIES else "ALL",
             "turns": self._turn_logs,
         }
         with open(log_path, "w", encoding="utf-8") as f:
