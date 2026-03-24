@@ -16,3 +16,4 @@ Esempi di risposte da dare per testare, queste risposte vanno da ID.AM-01 A ID.A
 
 8) We manage the lifecycle of all assets and data according to our [Secure System Development Life Cycle (SSDLC) and IT Asset Management Policies], ensuring security gates are enforced from procurement and development through to decommissioning. Enterprise Architecture and IT Ops handle the operational lifecycle phases, while SecOps conducts mandatory risk assessments and vulnerability checks before deployment and oversees secure disposal. To document this end-to-end integration, we maintain SSDLC stage-gate approval records in our ticketing system (e.g., Jira), pre-production security testing reports, hardware certificates of destruction, and automated data retention and purging logs.
 
+

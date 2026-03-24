@@ -132,6 +132,11 @@ class ProfileManager:
             
         for col, value in updates_dict.items():
             if col in self.df.columns:
+                # LLM might occasionally return a list instead of a string.
+                # Pandas expects a single scalar here, so we stringify lists.
+                if isinstance(value, list):
+                    value = ", ".join(str(v) for v in value)
+                    
                 self.df.loc[self.df['Subcategory_ID'] == subcategory_id, col] = value
             else:
                 print(f"Attenzione: Colonna '{col}' non esiste nel DataFrame.")

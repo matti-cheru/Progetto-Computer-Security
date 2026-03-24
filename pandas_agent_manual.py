@@ -330,11 +330,16 @@ IMPORTANT RULES:
                     model=self.model_name,
                     messages=messages,
                     temperature=self.temperature,
-                    max_tokens=500
+                    max_tokens=2048
                 )
                 
+                # Defensively catch providers returning `choices: null` (e.g. OpenRouter free endpoints)
+                if not getattr(response, "choices", None):
+                    raise ValueError(f"Malformed API response (missing choices). Raw: {response}")
+                    
                 choice = response.choices[0]
                 message = choice.message
+                reasoning = getattr(message, 'reasoning_content', None)
                 
                 # Log risposta LLM
                 if self.verbose:
@@ -345,24 +350,27 @@ IMPORTANT RULES:
                     print(message.content if message.content else "[None - Empty response]")
                     print("-"*80)
                     
-                    if message.reasoning_content:
-                        print(f"\n🧠 REASONING ({len(message.reasoning_content)} chars):")
+                    if reasoning:
+                        print(f"\n🧠 REASONING ({len(reasoning)} chars):")
                         print("-"*80)
-                        print(message.reasoning_content)
+                        print(reasoning)
                         print("-"*80)
                     
                     print(f"\n📊 TOKENS:")
-                    print(f"   Input: {response.usage.prompt_tokens}")
-                    print(f"   Output: {response.usage.completion_tokens}")
-                    if hasattr(response.usage, 'completion_tokens_details'):
+                    input_t = response.usage.prompt_tokens if getattr(response, 'usage', None) else 0
+                    output_t = response.usage.completion_tokens if getattr(response, 'usage', None) else 0
+                    print(f"   Input: {input_t}")
+                    print(f"   Output: {output_t}")
+                    if getattr(response, 'usage', None) and getattr(response.usage, 'completion_tokens_details', None):
                         details = response.usage.completion_tokens_details
-                        print(f"   Reasoning: {details.reasoning_tokens}")
+                        if getattr(details, 'reasoning_tokens', None) is not None:
+                            print(f"   Reasoning: {details.reasoning_tokens}")
                 
                 # Salva in history
                 history.append({
                     'iteration': iteration + 1,
                     'llm_response': message.content,
-                    'reasoning': message.reasoning_content,
+                    'reasoning': reasoning,
                     'tokens': {
                         'input': response.usage.prompt_tokens,
                         'output': response.usage.completion_tokens

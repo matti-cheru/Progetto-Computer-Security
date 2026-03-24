@@ -1,0 +1,211 @@
+{
+  "run_timestamp": "2026-03-24T18:16:39.985042",
+  "model": "Phi-4",
+  "profile_path": "C:\\Users\\apote\\Desktop\\cerutti\\Progetto-Computer-Security\\Compilazioni\\profile_20260324_174411.csv",
+  "scope": "ALL",
+  "turns": [
+    {
+      "turn": 1,
+      "timestamp": "2026-03-24T18:16:39.985042",
+      "subcategory_id": "GV.OC-01",
+      "row_context": {
+        "Function": "GOVERN (GV)",
+        "Category": "Organizational Context (GV.OC):",
+        "Subcategory_Description": "The organizational mission is understood and informs cybersecurity risk management",
+        "Implementation_Examples": "Ex1: Share the organization's mission (e.g., through vision and mission statements, marketing, and service strategies) to provide a basis for identifying risks that may impede that mission"
+      },
+      "catalog_context": {
+        "subcategory_id": "GV.OC-01",
+        "pandas_agent_queries": [
+          {
+            "step": "csf_catalog_lookup",
+            "question": "Get the Subcategory_Description and Implementation_Examples for the row where Subcategory_ID == 'GV.OC-01'. Return them as a string.",
+            "success": true,
+            "answer": "The organizational mission is understood and informs cybersecurity risk management Ex1: Share the organization's mission (e.g., through vision and mission statements, marketing, and service strategies) to provide a basis for identifying risks that may impede that mission",
+            "iterations": 2,
+            "history": [
+              {
+                "iteration": 1,
+                "llm_response": "Thought: I need to filter the dataframe to find the row where `Subcategory_ID` is 'GV.OC-01', and then extract the `Subcategory_Description` and `Implementation_Examples` columns from that row. Finally, I will concatenate these two columns into a single string.\n\nAction: python\nAction Input: df.loc[df['Subcategory_ID'] == 'GV.OC-01', ['Subcategory_Description', 'Implementation_Examples']].to_string(index=False, header=False)",
+                "reasoning": null,
+                "tokens": {
+                  "input": 733,
+                  "output": 101
+                },
+                "code_executed": "df.loc[df['Subcategory_ID'] == 'GV.OC-01', ['Subcategory_Description', 'Implementation_Examples']].to_string(index=False, header=False)",
+                "execution_result": "The organizational mission is understood and informs cybersecurity risk management Ex1: Share the organization's mission (e.g., through vision and mission statements, marketing, and service strategies) to provide a basis for identifying risks that may impede that mission",
+                "execution_success": true
+              },
+              {
+                "iteration": 2,
+                "llm_response": "Final Answer: The organizational mission is understood and informs cybersecurity risk management Ex1: Share the organization's mission (e.g., through vision and mission statements, marketing, and service strategies) to provide a basis for identifying risks that may impede that mission",
+                "reasoning": null,
+                "tokens": {
+                  "input": 891,
+                  "output": 51
+                },
+                "final_answer": "The organizational mission is understood and informs cybersecurity risk management Ex1: Share the organization's mission (e.g., through vision and mission statements, marketing, and service strategies) to provide a basis for identifying risks that may impede that mission"
+              }
+            ]
+          },
+          {
+            "step": "sp800_mapping_lookup",
+            "normalized_id": "GV.OC-1",
+            "question": "Get the SP800_53_Controls column value for the row where Subcategory_ID == 'GV.OC-1'. Return just the value.",
+            "success": true,
+            "answer": "[execution result]",
+            "iterations": 1,
+            "history": [
+              {
+                "iteration": 1,
+                "llm_response": "Thought: I need to filter the dataframe to find the row where `Subcategory_ID` is 'GV.OC-1' and then extract the value from the `SP800_53_Controls` column for that row.\n\nAction: python\n\nAction Input: df[df['Subcategory_ID'] == 'GV.OC-1']['SP800_53_Controls'].values[0] if not df[df['Subcategory_ID'] == 'GV.OC-1'].empty else None\n\nObservation: [execution result]\n\nFinal Answer: [execution result]",
+                "reasoning": null,
+                "tokens": {
+                  "input": 589,
+                  "output": 115
+                },
+                "final_answer": "[execution result]"
+              }
+            ]
+          }
+        ]
+      },
+      "current_phase": {
+        "question_generation": {
+          "prompt": "You are a professional cybersecurity auditor conducting a NIST CSF 2.0 compliance interview.\n\nYour task: formulate ONE clear, conversational question to ask the interviewee about the following NIST subcategory.\n\nSUBCATEGORY DETAILS:\n- ID: GV.OC-01\n- Category: Organizational Context (GV.OC):\n- Description: The organizational mission is understood and informs cybersecurity risk management\n- Implementation Examples: Ex1: Share the organization's mission (e.g., through vision and mission statements, marketing, and service strategies) to provide a basis for identifying risks that may impede that mission\n\nINSTRUCTIONS:\n1. Ask about their CURRENT state regarding this subcategory\n2. Be specific but not overwhelming — ask one focused question\n3. Briefly explain what this subcategory is about so the interviewee understands the context\n4. The question MUST explicitly ask the interviewee to provide information about ALL of the following areas for the COMPANY/ENTITY being profiled:\n   a) Whether this area is applicable/relevant to their organization\n   b) The PRIORITY they assign to this area (High, Medium, or Low)\n   c) Their current implementation status\n   d) Any formal policies, processes, or procedures in place\n   e) Internal or informal practices being followed\n   f) Who is responsible (roles and responsibilities)\n   g) Any standards, frameworks, or informative references they follow for this area (e.g. ISO 27001, NIST SP 800-53, sector-specific regulations, or any other relevant standard for their industry/context)\n   h) Any documentary evidence or artifacts they can provide\n5. Keep the tone professional but approachable\n6. Write ONLY the question, no preamble or extra text\n\nQuestion:",
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are a cybersecurity compliance auditor. Generate clear, professional interview questions."
+            },
+            {
+              "role": "user",
+              "content": "You are a professional cybersecurity auditor conducting a NIST CSF 2.0 compliance interview.\n\nYour task: formulate ONE clear, conversational question to ask the interviewee about the following NIST subcategory.\n\nSUBCATEGORY DETAILS:\n- ID: GV.OC-01\n- Category: Organizational Context (GV.OC):\n- Description: The organizational mission is understood and informs cybersecurity risk management\n- Implementation Examples: Ex1: Share the organization's mission (e.g., through vision and mission statements, marketing, and service strategies) to provide a basis for identifying risks that may impede that mission\n\nINSTRUCTIONS:\n1. Ask about their CURRENT state regarding this subcategory\n2. Be specific but not overwhelming — ask one focused question\n3. Briefly explain what this subcategory is about so the interviewee understands the context\n4. The question MUST explicitly ask the interviewee to provide information about ALL of the following areas for the COMPANY/ENTITY being profiled:\n   a) Whether this area is applicable/relevant to their organization\n   b) The PRIORITY they assign to this area (High, Medium, or Low)\n   c) Their current implementation status\n   d) Any formal policies, processes, or procedures in place\n   e) Internal or informal practices being followed\n   f) Who is responsible (roles and responsibilities)\n   g) Any standards, frameworks, or informative references they follow for this area (e.g. ISO 27001, NIST SP 800-53, sector-specific regulations, or any other relevant standard for their industry/context)\n   h) Any documentary evidence or artifacts they can provide\n5. Keep the tone professional but approachable\n6. Write ONLY the question, no preamble or extra text\n\nQuestion:"
+            }
+          ],
+          "model": "Phi-4",
+          "response": {
+            "content": "Could you please describe how your organization currently addresses the subcategory GV.OC-01, which is about understanding and integrating the organizational mission into cybersecurity risk management? Specifically, I would like to know if this area is applicable or relevant to your organization, the priority you assign to it (High, Medium, or Low), your current implementation status, any formal policies, processes, or procedures in place, and internal or informal practices being followed. Additionally, could you identify who is responsible for this area, any standards, frameworks, or informative references you follow, and if you can provide any documentary evidence or artifacts related to this subcategory?",
+            "reasoning_content": null,
+            "tokens": {
+              "input": 382,
+              "output": 128
+            }
+          }
+        },
+        "user_answer": "This area is fully applicable to our organization and is assigned a High priority, with a current implementation status of fully implemented across all business units. It is governed by our [Enterprise Risk Management (ERM) Policy] and [Cybersecurity Strategy Framework], supported by internal practices such as quarterly alignment workshops between business leaders and the security team. The Board of Directors defines the overarching mission, while the CISO and Risk Management team are responsible for mapping cyber risks to these business objectives, aligning with ISO 27001 (Clause 4), NIST CSF 2.0, and COBIT 2019. As documentary evidence, we maintain approved Cybersecurity Strategy documents, Board meeting minutes, Business Impact Analysis (BIA) reports, and a central Risk Register linking cyber risks to mission impacts.",
+        "extraction": {
+          "prompt": "Extract structured data from this interview answer about NIST CSF 2.0 subcategory GV.OC-01 (The organizational mission is understood and informs cybersecurity risk management).\n\nANSWER: \"This area is fully applicable to our organization and is assigned a High priority, with a current implementation status of fully implemented across all business units. It is governed by our [Enterprise Risk Management (ERM) Policy] and [Cybersecurity Strategy Framework], supported by internal practices such as quarterly alignment workshops between business leaders and the security team. The Board of Directors defines the overarching mission, while the CISO and Risk Management team are responsible for mapping cyber risks to these business objectives, aligning with ISO 27001 (Clause 4), NIST CSF 2.0, and COBIT 2019. As documentary evidence, we maintain approved Cybersecurity Strategy documents, Board meeting minutes, Business Impact Analysis (BIA) reports, and a central Risk Register linking cyber risks to mission impacts.\"\n\nReturn ONLY this JSON (no markdown, no explanation):\n\n{\n    \"Included_in_Profile\": \"Yes or No\",\n    \"Rationale\": \"Brief justification\",\n    \"Current_Priority\": \"High/Medium/Low, or 'Not specified' if user didn't say\",\n    \"Current_Status\": \"Implementation status\",\n    \"Current_Policies_Processes_Procedures\": \"Formal policies/procedures\",\n    \"Current_Internal_Practices\": \"Informal practices and tools used\",\n    \"Current_Roles_and_Responsibilities\": \"Who is responsible\",\n    \"Current_Selected_Informative_References\": \"Only standards/frameworks/regulations the user explicitly named (e.g. ISO 27001, NIST SP 800-53). Put tools in Internal_Practices instead.\",\n    \"Current_Artifacts_and_Evidence\": \"Documentation and evidence\"\n}\n\nRules: Use 'Not specified' for missing fields. Only extract what the user actually said.",
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are a data extraction assistant. Think briefly, then output ONLY valid JSON. Do not over-analyze or repeat yourself."
+            },
+            {
+              "role": "user",
+              "content": "Extract structured data from this interview answer about NIST CSF 2.0 subcategory GV.OC-01 (The organizational mission is understood and informs cybersecurity risk management).\n\nANSWER: \"This area is fully applicable to our organization and is assigned a High priority, with a current implementation status of fully implemented across all business units. It is governed by our [Enterprise Risk Management (ERM) Policy] and [Cybersecurity Strategy Framework], supported by internal practices such as quarterly alignment workshops between business leaders and the security team. The Board of Directors defines the overarching mission, while the CISO and Risk Management team are responsible for mapping cyber risks to these business objectives, aligning with ISO 27001 (Clause 4), NIST CSF 2.0, and COBIT 2019. As documentary evidence, we maintain approved Cybersecurity Strategy documents, Board meeting minutes, Business Impact Analysis (BIA) reports, and a central Risk Register linking cyber risks to mission impacts.\"\n\nReturn ONLY this JSON (no markdown, no explanation):\n\n{\n    \"Included_in_Profile\": \"Yes or No\",\n    \"Rationale\": \"Brief justification\",\n    \"Current_Priority\": \"High/Medium/Low, or 'Not specified' if user didn't say\",\n    \"Current_Status\": \"Implementation status\",\n    \"Current_Policies_Processes_Procedures\": \"Formal policies/procedures\",\n    \"Current_Internal_Practices\": \"Informal practices and tools used\",\n    \"Current_Roles_and_Responsibilities\": \"Who is responsible\",\n    \"Current_Selected_Informative_References\": \"Only standards/frameworks/regulations the user explicitly named (e.g. ISO 27001, NIST SP 800-53). Put tools in Internal_Practices instead.\",\n    \"Current_Artifacts_and_Evidence\": \"Documentation and evidence\"\n}\n\nRules: Use 'Not specified' for missing fields. Only extract what the user actually said."
+            }
+          ],
+          "model": "Phi-4",
+          "user_answer": "This area is fully applicable to our organization and is assigned a High priority, with a current implementation status of fully implemented across all business units. It is governed by our [Enterprise Risk Management (ERM) Policy] and [Cybersecurity Strategy Framework], supported by internal practices such as quarterly alignment workshops between business leaders and the security team. The Board of Directors defines the overarching mission, while the CISO and Risk Management team are responsible for mapping cyber risks to these business objectives, aligning with ISO 27001 (Clause 4), NIST CSF 2.0, and COBIT 2019. As documentary evidence, we maintain approved Cybersecurity Strategy documents, Board meeting minutes, Business Impact Analysis (BIA) reports, and a central Risk Register linking cyber risks to mission impacts.",
+          "attempts": [
+            {
+              "attempt": 1,
+              "response": {
+                "content": "```json\n{\n    \"Included_in_Profile\": \"Yes\",\n    \"Rationale\": \"The area is fully applicable and assigned a High priority.\",\n    \"Current_Priority\": \"High\",\n    \"Current_Status\": \"fully implemented across all business units\",\n    \"Current_Policies_Processes_Procedures\": \"[Enterprise Risk Management (ERM) Policy] and [Cybersecurity Strategy Framework]\",\n    \"Current_Internal_Practices\": \"quarterly alignment workshops between business leaders and the security team\",\n    \"Current_Roles_and_Responsibilities\": \"Board of Directors defines the mission; CISO and Risk Management team map cyber risks to business objectives\",\n    \"Current_Selected_Informative_References\": \"ISO 27001 (Clause 4), NIST CSF 2.0, COBIT 2019\",\n    \"Current_Artifacts_and_Evidence\": \"approved Cybersecurity Strategy documents, Board meeting minutes, Business Impact Analysis (BIA) reports, central Risk Register linking cyber risks to mission impacts\"\n}\n```",
+                "reasoning_content": null,
+                "tokens": {
+                  "input": 428,
+                  "output": 208
+                }
+              },
+              "parsed": {
+                "Included_in_Profile": "Yes",
+                "Rationale": "The area is fully applicable and assigned a High priority.",
+                "Current_Priority": "High",
+                "Current_Status": "fully implemented across all business units",
+                "Current_Policies_Processes_Procedures": "[Enterprise Risk Management (ERM) Policy] and [Cybersecurity Strategy Framework]",
+                "Current_Internal_Practices": "quarterly alignment workshops between business leaders and the security team",
+                "Current_Roles_and_Responsibilities": "Board of Directors defines the mission; CISO and Risk Management team map cyber risks to business objectives",
+                "Current_Selected_Informative_References": "ISO 27001 (Clause 4), NIST CSF 2.0, COBIT 2019",
+                "Current_Artifacts_and_Evidence": "approved Cybersecurity Strategy documents, Board meeting minutes, Business Impact Analysis (BIA) reports, central Risk Register linking cyber risks to mission impacts"
+              }
+            }
+          ],
+          "success": true
+        },
+        "extracted_data": {
+          "Included_in_Profile": "Yes",
+          "Rationale": "The area is fully applicable and assigned a High priority.",
+          "Current_Priority": "High",
+          "Current_Status": "fully implemented across all business units",
+          "Current_Policies_Processes_Procedures": "[Enterprise Risk Management (ERM) Policy] and [Cybersecurity Strategy Framework]",
+          "Current_Internal_Practices": "quarterly alignment workshops between business leaders and the security team",
+          "Current_Roles_and_Responsibilities": "Board of Directors defines the mission; CISO and Risk Management team map cyber risks to business objectives",
+          "Current_Selected_Informative_References": "ISO 27001 (Clause 4), NIST CSF 2.0, COBIT 2019",
+          "Current_Artifacts_and_Evidence": "approved Cybersecurity Strategy documents, Board meeting minutes, Business Impact Analysis (BIA) reports, central Risk Register linking cyber risks to mission impacts",
+          "Completion_Status": "IN_PROGRESS"
+        }
+      },
+      "target_phase": {
+        "question_generation": {
+          "prompt": "You are a professional cybersecurity auditor conducting a NIST CSF 2.0 compliance interview.\nWe are now in the TARGET phase of the interview for the following subcategory.\n\nSUBCATEGORY DETAILS:\n- ID: GV.OC-01\n- Category: Organizational Context (GV.OC):\n- Description: The organizational mission is understood and informs cybersecurity risk management\n\nCURRENT STATE (just collected from the user):\n  - Priority: High\n  - Status: fully implemented across all business units\n  - Policies_Processes_Procedures: [Enterprise Risk Management (ERM) Policy] and [Cybersecurity Strategy Framework]\n  - Internal_Practices: quarterly alignment workshops between business leaders and the security team\n  - Roles_and_Responsibilities: Board of Directors defines the mission; CISO and Risk Management team map cyber risks to business objectives\n  - Selected_Informative_References: ISO 27001 (Clause 4), NIST CSF 2.0, COBIT 2019\n  - Artifacts_and_Evidence: approved Cybersecurity Strategy documents, Board meeting minutes, Business Impact Analysis (BIA) reports, central Risk Register linking cyber risks to mission impacts\n\nINSTRUCTIONS:\n1. Formulate ONE clear, conversational question asking about the organization's TARGET state (goals, improvements, desired future state) for this subcategory.\n2. Acknowledge their current state briefly to make the question contextual (e.g., \"Given that you currently do X...\").\n3. The question MUST explicitly ask the user for:\n   a) Target Priority (High, Medium, Low)\n   b) Target CSF Tier (Tier 1 to 4)\n   c) Target Policies, Processes, or Procedures they want to implement\n   d) Target Internal Practices they aim for\n   e) Target Roles and Responsibilities (any changes needed?)\n   f) Target Selected Informative References (new frameworks/standards to adopt?)\n4. Keep the tone professional but approachable.\n5. Write ONLY the question, no preamble or extra text.\n\nQuestion:",
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are a cybersecurity compliance auditor. Generate clear, professional interview questions."
+            },
+            {
+              "role": "user",
+              "content": "You are a professional cybersecurity auditor conducting a NIST CSF 2.0 compliance interview.\nWe are now in the TARGET phase of the interview for the following subcategory.\n\nSUBCATEGORY DETAILS:\n- ID: GV.OC-01\n- Category: Organizational Context (GV.OC):\n- Description: The organizational mission is understood and informs cybersecurity risk management\n\nCURRENT STATE (just collected from the user):\n  - Priority: High\n  - Status: fully implemented across all business units\n  - Policies_Processes_Procedures: [Enterprise Risk Management (ERM) Policy] and [Cybersecurity Strategy Framework]\n  - Internal_Practices: quarterly alignment workshops between business leaders and the security team\n  - Roles_and_Responsibilities: Board of Directors defines the mission; CISO and Risk Management team map cyber risks to business objectives\n  - Selected_Informative_References: ISO 27001 (Clause 4), NIST CSF 2.0, COBIT 2019\n  - Artifacts_and_Evidence: approved Cybersecurity Strategy documents, Board meeting minutes, Business Impact Analysis (BIA) reports, central Risk Register linking cyber risks to mission impacts\n\nINSTRUCTIONS:\n1. Formulate ONE clear, conversational question asking about the organization's TARGET state (goals, improvements, desired future state) for this subcategory.\n2. Acknowledge their current state briefly to make the question contextual (e.g., \"Given that you currently do X...\").\n3. The question MUST explicitly ask the user for:\n   a) Target Priority (High, Medium, Low)\n   b) Target CSF Tier (Tier 1 to 4)\n   c) Target Policies, Processes, or Procedures they want to implement\n   d) Target Internal Practices they aim for\n   e) Target Roles and Responsibilities (any changes needed?)\n   f) Target Selected Informative References (new frameworks/standards to adopt?)\n4. Keep the tone professional but approachable.\n5. Write ONLY the question, no preamble or extra text.\n\nQuestion:"
+            }
+          ],
+          "model": "Phi-4",
+          "response": {
+            "content": "Given that you currently have a high-priority status with fully implemented policies, processes, and procedures across all business units, could you please outline your target state for this subcategory by specifying the desired priority level, the CSF Tier you aim to achieve, any new policies, processes, or procedures you plan to implement, the internal practices you intend to enhance, any changes to roles and responsibilities, and any new informative references or frameworks you are considering adopting?",
+            "reasoning_content": null
+          }
+        },
+        "user_answer": "Our target priority remains High as we aim for CSF Tier 4 (Adaptive) by implementing a new [Dynamic Cyber Risk Quantification Policy] and an [Automated Strategy Alignment Procedure]. We intend to enhance internal practices by transitioning from quarterly workshops to continuous alignment using real-time automated dashboards that link threat intelligence directly to business revenue impacts. Roles will be expanded to include a dedicated Cyber-Risk Steering Committee and embedded Business Information Security Officers (BISOs) within all core business units, while we plan to adopt FAIR (Factor Analysis of Information Risk) and NIST SP 800-39 as our newly selected informative references.",
+        "extraction": {
+          "prompt": "Extract structured data from this interview answer about the **TARGET STATE** (future goals) for NIST CSF 2.0 subcategory GV.OC-01 (The organizational mission is understood and informs cybersecurity risk management).\n\nANSWER: \"Our target priority remains High as we aim for CSF Tier 4 (Adaptive) by implementing a new [Dynamic Cyber Risk Quantification Policy] and an [Automated Strategy Alignment Procedure]. We intend to enhance internal practices by transitioning from quarterly workshops to continuous alignment using real-time automated dashboards that link threat intelligence directly to business revenue impacts. Roles will be expanded to include a dedicated Cyber-Risk Steering Committee and embedded Business Information Security Officers (BISOs) within all core business units, while we plan to adopt FAIR (Factor Analysis of Information Risk) and NIST SP 800-39 as our newly selected informative references.\"\n\nReturn ONLY this JSON (no markdown, no explanation):\n\n{\n    \"Target_Priority\": \"High/Medium/Low, or 'Not specified'\",\n    \"Target_CSF_Tier\": \"Tier 1/2/3/4, or 'Not specified'\",\n    \"Target_Policies_Processes_Procedures\": \"Target/planned policies\",\n    \"Target_Internal_Practices\": \"Target/planned practices\",\n    \"Target_Roles_and_Responsibilities\": \"Target responsibilities\",\n    \"Target_Selected_Informative_References\": \"Target frameworks/standards to adopt\"\n}\n\nRules: Use 'Not specified' for missing fields. Only extract what the user actually said about their TARGET or FUTURE state.",
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are a data extraction assistant. Think briefly, then output ONLY valid JSON. Do not over-analyze or repeat yourself."
+            },
+            {
+              "role": "user",
+              "content": "Extract structured data from this interview answer about the **TARGET STATE** (future goals) for NIST CSF 2.0 subcategory GV.OC-01 (The organizational mission is understood and informs cybersecurity risk management).\n\nANSWER: \"Our target priority remains High as we aim for CSF Tier 4 (Adaptive) by implementing a new [Dynamic Cyber Risk Quantification Policy] and an [Automated Strategy Alignment Procedure]. We intend to enhance internal practices by transitioning from quarterly workshops to continuous alignment using real-time automated dashboards that link threat intelligence directly to business revenue impacts. Roles will be expanded to include a dedicated Cyber-Risk Steering Committee and embedded Business Information Security Officers (BISOs) within all core business units, while we plan to adopt FAIR (Factor Analysis of Information Risk) and NIST SP 800-39 as our newly selected informative references.\"\n\nReturn ONLY this JSON (no markdown, no explanation):\n\n{\n    \"Target_Priority\": \"High/Medium/Low, or 'Not specified'\",\n    \"Target_CSF_Tier\": \"Tier 1/2/3/4, or 'Not specified'\",\n    \"Target_Policies_Processes_Procedures\": \"Target/planned policies\",\n    \"Target_Internal_Practices\": \"Target/planned practices\",\n    \"Target_Roles_and_Responsibilities\": \"Target responsibilities\",\n    \"Target_Selected_Informative_References\": \"Target frameworks/standards to adopt\"\n}\n\nRules: Use 'Not specified' for missing fields. Only extract what the user actually said about their TARGET or FUTURE state."
+            }
+          ],
+          "model": "Phi-4",
+          "user_answer": "Our target priority remains High as we aim for CSF Tier 4 (Adaptive) by implementing a new [Dynamic Cyber Risk Quantification Policy] and an [Automated Strategy Alignment Procedure]. We intend to enhance internal practices by transitioning from quarterly workshops to continuous alignment using real-time automated dashboards that link threat intelligence directly to business revenue impacts. Roles will be expanded to include a dedicated Cyber-Risk Steering Committee and embedded Business Information Security Officers (BISOs) within all core business units, while we plan to adopt FAIR (Factor Analysis of Information Risk) and NIST SP 800-39 as our newly selected informative references.",
+          "attempts": [
+            {
+              "attempt": 1,
+              "parsed": {
+                "Target_Priority": "High",
+                "Target_CSF_Tier": "Tier 4 (Adaptive)",
+                "Target_Policies_Processes_Procedures": "[Dynamic Cyber Risk Quantification Policy], [Automated Strategy Alignment Procedure]",
+                "Target_Internal_Practices": "transitioning from quarterly workshops to continuous alignment using real-time automated dashboards that link threat intelligence directly to business revenue impacts",
+                "Target_Roles_and_Responsibilities": "dedicated Cyber-Risk Steering Committee, embedded Business Information Security Officers (BISOs) within all core business units",
+                "Target_Selected_Informative_References": "FAIR (Factor Analysis of Information Risk), NIST SP 800-39"
+              }
+            }
+          ],
+          "success": true
+        },
+        "extracted_data": {
+          "Target_Priority": "High",
+          "Target_CSF_Tier": "Tier 4 (Adaptive)",
+          "Target_Policies_Processes_Procedures": "[Dynamic Cyber Risk Quantification Policy], [Automated Strategy Alignment Procedure]",
+          "Target_Internal_Practices": "transitioning from quarterly workshops to continuous alignment using real-time automated dashboards that link threat intelligence directly to business revenue impacts",
+          "Target_Roles_and_Responsibilities": "dedicated Cyber-Risk Steering Committee, embedded Business Information Security Officers (BISOs) within all core business units",
+          "Target_Selected_Informative_References": "FAIR (Factor Analysis of Information Risk), NIST SP 800-39",
+          "Completion_Status": "DONE"
+        }
+      }
+    }
+  ]
+}
