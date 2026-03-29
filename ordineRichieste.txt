@@ -1,7 +1,0 @@
-Passo 1: Definire il perimetro (Scoping)
-Non puoi valutare "tutto" alla cieca. Il primo passo è decidere a cosa si applica il profilo.
-
-Cosa fare: Determina se il profilo coprirà l'intera organizzazione, una specifica divisione di business (es. Risorse Umane), un sistema critico o un'area geografica.
-
-Lato LLM: Il tuo chatbot deve chiedere all'utente: "Qual è il perimetro di questa valutazione? Stiamo analizzando       l'intera azienda o un dipartimento specifico?"
-

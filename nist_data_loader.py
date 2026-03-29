@@ -188,7 +188,6 @@ def load_all_nist_data() -> Dict[str, pd.DataFrame]:
     return loader.load_all()
 
 
-# Script di test per verificare il caricamento
 if __name__ == "__main__":
     print("="*70)
     print("TEST: NIST Data Loader")

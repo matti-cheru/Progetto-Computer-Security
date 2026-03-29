@@ -22,7 +22,6 @@ import pandas as pd
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# Carichiamo le variabili d'ambiente dal file .env all'avvio
 load_dotenv()
 
 from profile_manager import ProfileManager
@@ -109,7 +108,7 @@ class InterviewEngine:
             log_dir:    Directory for JSON logs (auto-created per run)
         """
         if api_key is None:
-            # Ora tenta di prendere la chiave in modo sicuro unicamente dall'ambiente (che include l'env file)
+            
             api_key = os.environ.get("GPUSTACK_API_KEY")
             
             if not api_key:
@@ -238,26 +237,26 @@ class InterviewEngine:
 
         self._print_always(
             "\n╔════════════════════════════════════════════════════════════╗"
-            "\n║           Select Compilation Mode                        ║"
+            "\n║           Select Compilation Mode                          ║"
             "\n╠════════════════════════════════════════════════════════════╣"
         )
 
         if existing:
             self._print_always(
-                "║                                                          ║"
-                "\n║  [N] Start a NEW compilation                             ║"
-                "\n║  [R] Resume an existing compilation                      ║"
-                "\n║  [E] Export an existing compilation to Excel             ║"
-                "\n║  [Q] Quit                                                ║"
-                "\n║                                                          ║"
+                "║                                                            ║"
+                "\n║  [N] Start a NEW compilation                               ║"
+                "\n║  [R] Resume an existing compilation                        ║"
+                "\n║  [E] Export an existing compilation to Excel               ║"
+                "\n║  [Q] Quit                                                  ║"
+                "\n║                                                            ║"
                 "\n╚════════════════════════════════════════════════════════════╝"
             )
         else:
             self._print_always(
-                "║                                                          ║"
-                "\n║  No existing compilations found.                         ║"
-                "\n║  A new compilation will be created.                      ║"
-                "\n║                                                          ║"
+                "║                                                           ║"
+                "\n║  No existing compilations found.                           ║"
+                "\n║  A new compilation will be created.                        ║"
+                "\n║                                                            ║"
                 "\n╚════════════════════════════════════════════════════════════╝"
             )
             return self._create_new_session()
@@ -499,12 +498,12 @@ class InterviewEngine:
         """
         self._print_always(
             "\n╔════════════════════════════════════════════════════════════╗"
-            "\n║  Interview Started                                       ║"
+            "\n║  Interview Started                                         ║"
             "\n╠════════════════════════════════════════════════════════════╣"
-            "\n║  Commands:                                                ║"
-            "\n║   /progress  — Show completion progress                  ║"
-            "\n║   /skip      — Skip the current subcategory              ║"
-            "\n║   /quit      — Save and exit (resume later)              ║"
+            "\n║  Commands:                                                 ║"
+            "\n║   /progress  — Show completion progress                    ║"
+            "\n║   /skip      — Skip the current subcategory                ║"
+            "\n║   /quit      — Save and exit (resume later)                ║"
             "\n╚════════════════════════════════════════════════════════════╝"
         )
 
@@ -888,9 +887,7 @@ class InterviewEngine:
                 "history": agent_result_1.get("history", []),
             })
 
-            # Also do a direct lookup to populate ctx reliably
-            # (the agent answer is for logging/transparency,
-            #  the direct lookup ensures we always have the data)
+
             cat_rows = self._csf_catalog[
                 self._csf_catalog["Subcategory_ID"] == subcategory_id
             ]
@@ -1378,7 +1375,6 @@ Rules: Use 'Not specified' for missing fields. Only extract what the user actual
                 self._print_verbose(f"   ❌ JSON parse error: {e}")
                 attempt_trace["error"] = f"JSONDecodeError: {e}"
                 trace["attempts"].append(attempt_trace)
-                # Don't retry on JSON errors — the content exists but is malformed
                 break
 
             except Exception as e:
@@ -1694,7 +1690,7 @@ if __name__ == "__main__":
         else:
             interview_model = models[0]
             
-    # As requested: "se scelgo openrouter/github utilizza sia per la conversazione sia per pandasagent openrouter/github"
+
     if provider_choice in ["2", "3"]:
         pandas_model = interview_model
     else:

@@ -1,8 +1,0 @@
-1) noto che non chiede mai la prioria' esplicitamente e quindi spesso non 
-    la inserisce nel csv da compilare. 
-    Cambiare il prompt per citare la priorita' spicificatamente oppure citare 
-    tutti i campi da compilare.
-2) Per ora prende quello che puo' dalla risposta anche se la risposta non e' 
-    completa e mette N/A nei campi dove non sa cosa mettere.
-3) Forse ci sta specificare nella domanda se la categoria e' di competenze 
-    dell'azienda/entita' di cui si sta facendo il profilo.

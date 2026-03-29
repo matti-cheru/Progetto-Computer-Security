@@ -1,15 +1,15 @@
 """
 PANDAS AGENT MANUAL - Core RAG Engine
 
-Implementazione manuale di un Pandas Agent usando libreria OpenAI nativa.
-Questo agent:
-- Interpreta domande in linguaggio naturale
-- Genera codice Python per interrogare dataframe
-- Esegue il codice su dati reali NIST
-- Segue il formato ReAct (Reasoning + Acting)
-- Espone reasoning tokens per trasparenza
+Manual implementation of a Pandas Agent using native OpenAI library.
+This agent:
+- Interprets questions in natural language
+- Generates Python code to query dataframes
+- Executes code on real NIST data
+- Follows the ReAct format (Reasoning + Acting)
+- Exposes reasoning tokens for transparency
 
-Questo è il CUORE del sistema RAG dinamico per il dialogo compliance.
+This is the CORE of the dynamic RAG system for compliance dialogue.
 """
 import os
 import re
@@ -20,12 +20,12 @@ from openai import OpenAI
 
 class ManualPandasAgent:
     """
-    Pandas Agent manuale con pieno controllo e trasparenza.
+    Manual Pandas Agent with full control and transparency.
     
-    Usa la libreria openai nativa (non LangChain) per:
-    - Accesso completo a reasoning_content
-    - Controllo totale sul flusso ReAct
-    - Debugging dettagliato di ogni step
+    Uses the native openai library (not LangChain) to:
+    - Have full access to reasoning_content
+    - Have complete control over the ReAct flow
+    - Provide detailed debugging for each step
     """
     
     def __init__(
@@ -37,14 +37,14 @@ class ManualPandasAgent:
         verbose: bool = True
     ):
         """
-        Inizializza il Pandas Agent manuale.
+        Initializes the manual Pandas Agent.
         
         Args:
-            base_url: URL del cluster LLM UniBS
-            model_name: Modello da usare
-            api_key: API key (default da env GPUSTACK_API_KEY)
-            temperature: Temperatura LLM (0.0 = deterministico)
-            verbose: Se True, stampa tutti i dettagli
+            base_url: URL for the UniBS LLM cluster
+            model_name: Model to use
+            api_key: API key (default from env GPUSTACK_API_KEY)
+            temperature: LLM Temperature (0.0 = deterministic)
+            verbose: If True, prints all details
         """
         if api_key is None:
             api_key = os.environ.get(
@@ -58,23 +58,23 @@ class ManualPandasAgent:
         self.verbose = verbose
         
         if verbose:
-            print(f"✅ ManualPandasAgent inizializzato")
+            print(f"✅ ManualPandasAgent initialized")
             print(f"   Model: {model_name}")
             print(f"   Temperature: {temperature}")
             print(f"   Base URL: {base_url}")
     
     def _create_prompt(self, df: pd.DataFrame, question: str) -> str:
         """
-        Crea il prompt ReAct-style per interrogare un dataframe.
+        Creates the ReAct-style prompt to query a dataframe.
         
         Args:
-            df: DataFrame da interrogare
-            question: Domanda in linguaggio naturale
+            df: DataFrame to query
+            question: Natural language question
             
         Returns:
-            Prompt formattato per il modello
+            Formatted prompt for the model
         """
-        # Informazioni sul dataframe, TO DO, in base allo step della profilazione o alla domanda dirgli quale database interrogare
+        # Dataframe info, TO DO: depending on the profiling step or question, tell it which database to query
         df_info = f"""You have access to a pandas dataframe called `df` with the following structure:
 
 Shape: {df.shape[0]} rows × {df.shape[1]} columns
@@ -85,16 +85,16 @@ First 3 rows as reference:
 
 """
         
-        # Aggiungi informazioni sulle categorie se presente la colonna Category, questa vosa e' valida solo per i primi due csv
+        # Add category information if 'Category' column is present, this is only valid for the first two csv files
         if 'Category' in df.columns:
             unique_categories = df['Category'].unique()
-            categories_sample = list(unique_categories[:10])  # Prime 10 categorie
+            categories_sample = list(unique_categories[:10])  # First 10 categories
             df_info += f"""
 To search by topic (e.g., "data protection", "access control"), use the Category column.
 Example: df[df['Category'].str.contains('Data Security', case=False)]
 """
         
-        # Istruzioni ReAct
+        # ReAct Instructions
         instructions = """To answer questions about this dataframe, follow this format STRICTLY:
 
 Thought: [Describe what you need to do to answer the question]
@@ -123,38 +123,38 @@ IMPORTANT RULES:
     
     def _parse_response(self, content: str) -> Tuple[Optional[str], Optional[str]]:
         """
-        Parsa la risposta del modello per estrarre Action Input o Final Answer.
+        Parses the model's response to extract Action Input or Final Answer.
         
         Args:
-            content: Contenuto della risposta (può essere None)
+            content: Content of the response (can be None)
             
         Returns:
             Tuple (code_to_execute, final_answer)
-            - code_to_execute: Codice Python da eseguire (se trovato)
-            - final_answer: Risposta finale (se trovata)
+            - code_to_execute: Python code to execute (if found)
+            - final_answer: Final answer (if found)
         """
-        # Gestisci caso None o empty
+        # Handle None or empty case
         if content is None or content == "":
             return None, None
         
-        # Check per Final Answer (esplicito)
+        # Check for Final Answer (explicit)
         if "Final Answer:" in content:
             final_answer = content.split("Final Answer:")[-1].strip()
             return None, final_answer
         
-        # Check per risposta finale implicita (tabella, lista formattata, risposta narrativa)
-        # Se non c'è "Action:" o "Thought:" e il contenuto sembra una risposta
+        # Check for implicit final answer (table, formatted list, narrative answer)
+        # If there's no "Action:" or "Thought:" and the content looks like an answer
         content_lower = content.lower()
         has_react_keywords = any(kw in content for kw in ["Action:", "Action Input:", "Thought:", "Observation:"])
         
-        # Se non ha keyword ReAct e sembra una risposta formattata (markdown table, lista, paragrafo)
+        # If it doesn't have ReAct keywords and looks formatted (markdown table, list, paragraph)
         if not has_react_keywords:
-            # Risposta corta senza keyword ReAct → quasi certamente è la risposta diretta
-            # Es: il modello risponde solo "CM-8" dopo aver già eseguito il codice
+            # Short answer without ReAct keyword → almost certainly it's the direct answer
+            # Ex: the model answers only "CM-8" after having already executed the code
             if len(content.strip()) < 200:
                 return None, content.strip()
 
-            # Cerca indicatori di risposta finale per risposte più lunghe
+            # Look for final answer indicators for longer answers
             final_indicators = [
                 "subcategories related to",
                 "| subcategory_id |",  # Markdown table header
@@ -165,20 +165,20 @@ IMPORTANT RULES:
             ]
             
             if any(indicator in content_lower for indicator in final_indicators):
-                # Probabilmente è una risposta finale
+                # Probably it's a final answer
                 return None, content.strip()
         
-        # Cerca Action Input
+        # Look for Action Input
         if "Action Input:" in content:
             lines = content.split("\n")
             for i, line in enumerate(lines):
                 if "Action Input:" in line:
-                    # Codice può essere sulla stessa riga o riga dopo
+                    # Code can be on the same line or the line below
                     code = line.split("Action Input:")[-1].strip()
                     if not code and i + 1 < len(lines):
                         code = lines[i + 1].strip()
                     
-                    # Rimuovi eventuali backticks
+                    # Remove any backticks
                     code = code.strip('`').strip()
                     
                     if code:
@@ -188,21 +188,21 @@ IMPORTANT RULES:
     
     def _execute_code(self, code: str, df: pd.DataFrame) -> Tuple[bool, str]:
         """
-        Esegue codice Python in modo sicuro (con eval).
+        Executes Python code safely (with eval).
         
         Args:
-            code: Codice Python da eseguire
-            df: DataFrame su cui eseguire
+            code: Python code to execute
+            df: DataFrame to execute on
             
         Returns:
             Tuple (success, result_or_error)
         """
         try:
-            # Esegui in ambiente controllato
+            # Execute in controlled environment
             result = eval(code, {"df": df, "pd": pd, "len": len, "str": str})
 
-            # Evita il troncamento con "..." tipico della rappresentazione pandas.
-            # In questo modo il log JSON contiene il contenuto completo dell'esecuzione.
+            # Avoid the "..." truncation typical of pandas representation.
+            # This way the JSON log contains the complete execution content.
             if isinstance(result, pd.DataFrame):
                 return True, result.to_string(index=True, max_colwidth=None)
 
@@ -222,13 +222,13 @@ IMPORTANT RULES:
         initial_prompt: Optional[str] = None
     ):
         """
-        Salva il log completo della query in un file JSON.
+        Saves the complete query log to a JSON file.
         
         Args:
-            filepath: Path del file JSON dove salvare
-            question: Domanda originale
-            result: Risultato della query (con history)
-            df: DataFrame usato
+            filepath: Path of the JSON file where to save
+            question: Original question
+            result: Query result (with history)
+            df: Used DataFrame
         """
         import json
         from datetime import datetime
@@ -265,27 +265,27 @@ IMPORTANT RULES:
         log_to_json: Optional[str] = None
     ) -> Dict:
         """
-        Esegue una query su un dataframe in linguaggio naturale.
+        Executes a query on a dataframe in natural language.
         
-        Questo è il metodo principale che implementa il ciclo ReAct:
-        1. Invia prompt al modello
-        2. Modello risponde con Thought/Action/Action Input
-        3. Esegue il codice Python
-        4. Ritorna Observation al modello
-        5. Ripete fino a Final Answer o max iterations
+        This is the main method that implements the ReAct cycle:
+        1. Sends prompt to the model
+        2. Model responds with Thought/Action/Action Input
+        3. Executes the Python code
+        4. Returns Observation to the model
+        5. Repeats until Final Answer or max iterations
         
         Args:
-            df: DataFrame da interrogare
-            question: Domanda in linguaggio naturale
-            max_iterations: Max numero di iterazioni ReAct
-            log_to_json: Se specificato, salva log completo in questo file JSON
+            df: DataFrame to query
+            question: Natural language question
+            max_iterations: Max number of ReAct iterations
+            log_to_json: If specified, saves complete log in this JSON file
             
         Returns:
-            Dict con:
-                - answer: Risposta finale
-                - success: True se completato con successo
-                - iterations: Numero di iterazioni usate
-                - history: Storia completa della conversazione per debugging
+            Dict with:
+                - answer: Final answer
+                - success: True if completed successfully
+                - iterations: Number of iterations used
+                - history: Complete conversation history for debugging
         """
         if self.verbose:
             print("\n" + "="*80)
@@ -294,7 +294,7 @@ IMPORTANT RULES:
             print(f"Question: {question}")
             print(f"Dataset: {df.shape[0]} rows × {df.shape[1]} columns")
         
-        # Crea prompt iniziale
+        # Create initial prompt
         initial_prompt = self._create_prompt(df, question)
         
         if self.verbose:
@@ -303,7 +303,7 @@ IMPORTANT RULES:
             print(initial_prompt[:500] + "..." if len(initial_prompt) > 500 else initial_prompt)
             print("-"*80)
         
-        # Inizializza conversazione
+        # Initialize conversation
         messages = [
             {
                 "role": "system",
@@ -315,16 +315,16 @@ IMPORTANT RULES:
             }
         ]
         
-        history = []  # Per tracking completo
+        history = []  # For complete tracking
         
-        # Ciclo ReAct
+        # ReAct Cycle
         for iteration in range(max_iterations):
             if self.verbose:
                 print(f"\n{'='*80}")
                 print(f"🔄 ITERATION {iteration + 1}/{max_iterations}")
                 print("="*80)
             
-            # Chiama LLM
+            # Call LLM
             try:
                 response = self.client.chat.completions.create(
                     model=self.model_name,
@@ -341,7 +341,7 @@ IMPORTANT RULES:
                 message = choice.message
                 reasoning = getattr(message, 'reasoning_content', None)
                 
-                # Log risposta LLM
+                # Log LLM response
                 if self.verbose:
                     print(f"\n📥 LLM RESPONSE:")
                     content_len = len(message.content) if message.content else 0
@@ -366,7 +366,7 @@ IMPORTANT RULES:
                         if getattr(details, 'reasoning_tokens', None) is not None:
                             print(f"   Reasoning: {details.reasoning_tokens}")
                 
-                # Salva in history
+                # Save in history
                 history.append({
                     'iteration': iteration + 1,
                     'llm_response': message.content,
@@ -377,17 +377,17 @@ IMPORTANT RULES:
                     }
                 })
                 
-                # Aggiungi risposta LLM alla conversazione (gestisci None)
+                # Add LLM response to conversation (handle None)
                 response_content = message.content if message.content else ""
                 messages.append({
                     "role": "assistant",
                     "content": response_content
                 })
                 
-                # Parsa risposta
+                # Parse response
                 code_to_execute, final_answer = self._parse_response(message.content)
                 
-                # Check per Final Answer
+                # Check for Final Answer
                 if final_answer:
                     if self.verbose:
                         print(f"\n✅ FINAL ANSWER FOUND:")
@@ -404,13 +404,13 @@ IMPORTANT RULES:
                         'history': history
                     }
                     
-                    # Salva log JSON se richiesto
+                    # Save JSON log if requested
                     if log_to_json:
                         self._save_log_json(log_to_json, question, result, df, initial_prompt)
                     
                     return result
                 
-                # Esegui codice se presente
+                # Execute code if present
                 if code_to_execute:
                     if self.verbose:
                         print(f"\n🔧 EXECUTING CODE:")
@@ -428,7 +428,7 @@ IMPORTANT RULES:
                     history[-1]['execution_result'] = result
                     history[-1]['execution_success'] = success
                     
-                    # Aggiungi observation alla conversazione
+                    # Add observation to conversation
                     observation = f"Observation: {result}"
                     messages.append({
                         "role": "user",
@@ -437,28 +437,28 @@ IMPORTANT RULES:
                     
                     if self.verbose:
                         print(f"\n📥 OBSERVATION SENT BACK TO LLM:")
-                        # Tronca per visualizzazione ma mostra lunghezza completa
+                        # Truncate for visualization but show complete length
                         if len(observation) > 500:
                             print(f"   {observation[:500]}...")
-                            print(f"   [Troncato per visualizzazione - Lunghezza completa: {len(observation)} chars]")
-                            print(f"   [L'LLM riceve il contenuto COMPLETO, non troncato]")
+                            print(f"   [Truncated for visualization - Complete length: {len(observation)} chars]")
+                            print(f"   [The LLM receives the COMPLETE content, not truncated]")
                         else:
                             print(f"   {observation}")
                 else:
-                    # Nessun Action Input o Final Answer trovato
+                    # No Action Input or Final Answer found
                     if self.verbose:
                         if message.content is None:
                             print("\n⚠️  LLM returned None/empty content")
                         else:
                             print("\n⚠️  No Action Input or Final Answer found in response")
                     
-                    # Se content è None/empty, consideriamolo un fallimento
+                    # If content is None/empty, consider it a failure
                     if message.content is None or message.content.strip() == "":
                         if self.verbose:
                             print("   Cannot continue without valid LLM response")
                         break
                     
-                    # Altrimenti potrebbe essere un formato non standard, proviamo ancora
+                    # Otherwise it might be a non-standard format, try again
                     break
                 
             except Exception as e:
@@ -474,7 +474,7 @@ IMPORTANT RULES:
                     'error': str(e)
                 }
         
-        # Max iterations raggiunto
+        # Max iterations reached
         if self.verbose:
             print(f"\n⚠️  MAX ITERATIONS ({max_iterations}) reached without Final Answer")
         
@@ -485,7 +485,7 @@ IMPORTANT RULES:
             'history': history
         }
         
-        # Salva log JSON se richiesto
+        # Save JSON log if requested
         if log_to_json:
             self._save_log_json(log_to_json, question, result, df, initial_prompt)
         
@@ -493,26 +493,26 @@ IMPORTANT RULES:
     
     def query_simple(self, df: pd.DataFrame, question: str) -> str:
         """
-        Versione semplificata di query() che ritorna solo la risposta.
+        Simplified version of query() that returns only the answer.
         
         Args:
-            df: DataFrame da interrogare
-            question: Domanda
+            df: DataFrame to query
+            question: Question
             
         Returns:
-            Risposta come stringa
+            Answer as a string
         """
         result = self.query(df, question)
         return result.get('answer', 'Error: No answer')
 
 
-# Test rapido
+# Quick test
 if __name__ == "__main__":
     print("\n" + "="*80)
     print("TEST: ManualPandasAgent")
     print("="*80)
     
-    # Crea dataframe di test
+    # Create test dataframe
     test_df = pd.DataFrame({
         'Name': ['Alice', 'Bob', 'Charlie', 'David'],
         'Age': [25, 30, 35, 40],
@@ -521,7 +521,7 @@ if __name__ == "__main__":
     
     print(f"\nTest DataFrame:\n{test_df}")
     
-    # Crea agent
+    # Create agent
     agent = ManualPandasAgent(verbose=True)
     
     # Test query
