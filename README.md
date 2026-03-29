@@ -34,7 +34,17 @@ This repository contains an AI-driven interview engine designed to perform a com
    GITHUB_TOKEN=your_token_here
    ```
 
-## 🚀 How to Run the Application
+## � LLM Provider Recommendation
+
+While the project supports the university's local cluster (GPUStack), **we recommend using external API providers if possible**. 
+
+The university cluster is frequently slow, and when overloaded by other users, it can become almost unusable. In contrast, external providers offer a much smoother experience and faster compilation times, delivering at least a **10x higher throughput** (tokens per second).
+
+We have successfully tested and recommend the following free alternatives:
+- **GitHub Models**: Tested with `phi-4` (Free)
+- **OpenRouter**: Tested with `gpt-oss` (Free)
+
+## �🚀 How to Run the Application
 
 To start the interview process, you typically run the main execution script (e.g., if you have configured the execution within `interview_engine.py` or a dedicated test script):
 
